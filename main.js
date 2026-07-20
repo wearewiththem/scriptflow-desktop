@@ -226,62 +226,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// --- HeyGen: läuft hier im Hauptprozess (echtes Node), damit Browser CORS
-// Beschränkungen keine Rolle spielen. Der Renderer redet nur über die
-// sichere Brücke in preload.js mit diesen Handlern, nie direkt mit HeyGen.
-
-async function heygenFetch(url, options) {
-  try {
-    const res = await fetch(url, options);
-    let data = null;
-    try { data = await res.json(); } catch (err) { /* Antwort war kein JSON */ }
-    if (!res.ok) logToFile('WARNUNG', `HeyGen Anfrage an ${url} fehlgeschlagen: ${res.status}`);
-    return { ok: res.ok, status: res.status, data };
-  } catch (err) {
-    logToFile('FEHLER', `HeyGen Anfrage an ${url} nicht durchführbar: ${err.message}`);
-    return { ok: false, status: 0, data: null };
-  }
-}
-
-ipcMain.handle('heygen-upload-audio', async (event, { apiKey, base64Audio, mimeType }) => {
-  const buffer = Buffer.from(base64Audio, 'base64');
-  const boundary = `----ScriptflowBoundary${Date.now()}`;
-  const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio"\r\nContent-Type: ${mimeType}\r\n\r\n`),
-    buffer,
-    Buffer.from(`\r\n--${boundary}--\r\n`)
-  ]);
-  return heygenFetch('https://api.heygen.com/v3/assets', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'Content-Type': `multipart/form-data; boundary=${boundary}`
-    },
-    body
-  });
-});
-
-ipcMain.handle('heygen-list-avatars', async (event, { apiKey }) => {
-  return heygenFetch('https://api.heygen.com/v2/avatars', {
-    headers: { 'x-api-key': apiKey }
-  });
-});
-
-ipcMain.handle('heygen-create-video', async (event, { apiKey, payload }) => {
-  return heygenFetch('https://api.heygen.com/v2/video/generate', {
-    method: 'POST',
-    headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-});
-
-ipcMain.handle('heygen-video-status', async (event, { apiKey, videoId }) => {
-  return heygenFetch(`https://api.heygen.com/v1/video_status.get?video_id=${encodeURIComponent(videoId)}`, {
-    headers: { 'x-api-key': apiKey }
-  });
-});
-
-// --- Zielordner: einmal wählen, danach landen HeyGen Videos automatisch dort ---
+// --- App-Version für Splash Screen und Titelleiste ---
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 
@@ -372,33 +317,6 @@ ipcMain.handle('check-for-updates', () => {
 ipcMain.handle('open-log-folder', () => {
   shell.showItemInFolder(logFilePath);
   return { ok: true, path: logFilePath };
-});
-
-ipcMain.handle('pick-folder', async () => {
-  const result = await dialog.showOpenDialog({
-    properties: ['openDirectory', 'createDirectory'],
-    title: 'Zielordner für HeyGen Videos wählen'
-  });
-  if (result.canceled || !result.filePaths.length) return { canceled: true };
-  return { canceled: false, path: result.filePaths[0] };
-});
-
-ipcMain.handle('save-video-to-folder', async (event, { videoUrl, folderPath, filename }) => {
-  try {
-    if (!fs.existsSync(folderPath)) {
-      return { ok: false, error: 'Zielordner existiert nicht mehr, bitte neu wählen.' };
-    }
-    const res = await fetch(videoUrl);
-    if (!res.ok) return { ok: false, error: `Download fehlgeschlagen (${res.status})` };
-    const buffer = Buffer.from(await res.arrayBuffer());
-    const fullPath = path.join(folderPath, filename);
-    fs.writeFileSync(fullPath, buffer);
-    logToFile('INFO', `Video gespeichert unter ${fullPath}`);
-    return { ok: true, path: fullPath };
-  } catch (err) {
-    logToFile('FEHLER', `Video konnte nicht gespeichert werden: ${err.message}`);
-    return { ok: false, error: err.message };
-  }
 });
 
 // --- Google Docs: reiner Text-Export ohne Google Login, funktioniert nur bei

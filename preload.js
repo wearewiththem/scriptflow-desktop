@@ -1,18 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('heygenBridge', {
-  uploadAudio: (apiKey, base64Audio, mimeType) =>
-    ipcRenderer.invoke('heygen-upload-audio', { apiKey, base64Audio, mimeType }),
-  listAvatars: (apiKey) =>
-    ipcRenderer.invoke('heygen-list-avatars', { apiKey }),
-  createVideo: (apiKey, payload) =>
-    ipcRenderer.invoke('heygen-create-video', { apiKey, payload }),
-  getVideoStatus: (apiKey, videoId) =>
-    ipcRenderer.invoke('heygen-video-status', { apiKey, videoId }),
-  pickFolder: () =>
-    ipcRenderer.invoke('pick-folder'),
-  saveVideoToFolder: (videoUrl, folderPath, filename) =>
-    ipcRenderer.invoke('save-video-to-folder', { videoUrl, folderPath, filename }),
+contextBridge.exposeInMainWorld('desktopBridge', {
   openLogFolder: () =>
     ipcRenderer.invoke('open-log-folder'),
   getAppVersion: () =>
