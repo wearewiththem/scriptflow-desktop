@@ -6,7 +6,7 @@
   "author": "Andreas",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win --publish always"
+    "dist": "electron-builder --win --publish onTagOrDraft"
   },
   "dependencies": {
     "electron-updater": "^6.1.7"
@@ -37,7 +37,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "DEIN-GITHUB-NUTZERNAME",
+      "owner": "wearewiththem",
       "repo": "scriptflow-desktop"
     }
   }
