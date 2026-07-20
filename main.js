@@ -1,0 +1,425 @@
+const { app, BrowserWindow, ipcMain, dialog, shell, session, Menu } = require('electron');
+const path = require('path');
+const fs = require('fs');
+const { autoUpdater } = require('electron-updater');
+
+// --- Fehlerprotokoll: einfache Logdatei im Nutzerverzeichnis, damit sich
+// Probleme bei dir oder bei Kollegen nachvollziehen lassen, ohne dass ihr
+// die Entwicklerkonsole öffnen müsst. ---
+const logFilePath = path.join(app.getPath('userData'), 'scriptflow.log');
+
+function logToFile(level, message) {
+  const line = `[${new Date().toISOString()}] [${level}] ${message}\n`;
+  try {
+    fs.appendFileSync(logFilePath, line);
+  } catch (err) {
+    // Wenn selbst das Schreiben der Logdatei fehlschlägt, bleibt nur die Konsole
+    console.error('Log konnte nicht geschrieben werden:', err);
+  }
+}
+
+// --- Nur eine Instanz gleichzeitig: verhindert, dass zwei geöffnete Kopien
+// sich gegenseitig die Fenstergröße oder andere lokale Dateien überschreiben. ---
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const existingWindow = BrowserWindow.getAllWindows()[0];
+    if (existingWindow) {
+      if (existingWindow.isMinimized()) existingWindow.restore();
+      existingWindow.focus();
+    }
+  });
+}
+
+process.on('uncaughtException', (err) => {
+  logToFile('FEHLER', `Unbehandelte Ausnahme: ${err.stack || err.message}`);
+  try {
+    dialog.showErrorBox(
+      'Scriptflow ist auf einen Fehler gestoßen',
+      `${err.message}\n\nDetails stehen im Fehlerprotokoll (Einstellungen → Verbindungen → Fehlerprotokoll öffnen).`
+    );
+  } catch (dialogErr) {
+    // Falls sogar der Dialog fehlschlägt, bleibt zumindest der Logeintrag
+  }
+});
+process.on('unhandledRejection', (reason) => {
+  logToFile('FEHLER', `Unbehandeltes Promise: ${reason instanceof Error ? (reason.stack || reason.message) : reason}`);
+});
+
+logToFile('INFO', `Scriptflow gestartet, Version ${app.getVersion()}`);
+
+function buildAppMenu() {
+  const template = [
+    {
+      label: 'Scriptflow',
+      submenu: [
+        {
+          label: 'Über Scriptflow',
+          click: () => {
+            dialog.showMessageBox({
+              type: 'info',
+              title: 'Über Scriptflow',
+              message: 'Scriptflow',
+              detail: `Version ${app.getVersion()}\nvon Andreas\n\nSkript zu Audio und Untertitel, ein Klick, drei Formate.`
+            });
+          }
+        },
+        {
+          label: 'Nach Updates suchen',
+          click: () => {
+            try {
+              autoUpdater.checkForUpdatesAndNotify();
+            } catch (err) {
+              logToFile('WARNUNG', `Manuelle Update-Prüfung fehlgeschlagen: ${err.message}`);
+            }
+          }
+        },
+        {
+          label: 'Fehlerprotokoll öffnen',
+          click: () => shell.showItemInFolder(logFilePath)
+        },
+        { type: 'separator' },
+        { role: 'quit', label: 'Beenden' }
+      ]
+    },
+    {
+      label: 'Bearbeiten',
+      submenu: [
+        { role: 'undo', label: 'Rückgängig' },
+        { role: 'redo', label: 'Wiederholen' },
+        { type: 'separator' },
+        { role: 'cut', label: 'Ausschneiden' },
+        { role: 'copy', label: 'Kopieren' },
+        { role: 'paste', label: 'Einfügen' },
+        { role: 'selectAll', label: 'Alles auswählen' }
+      ]
+    },
+    {
+      label: 'Ansicht',
+      submenu: [
+        { role: 'reload', label: 'Neu laden' },
+        { role: 'toggleDevTools', label: 'Entwicklertools' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: 'Zoom zurücksetzen' },
+        { role: 'zoomIn', label: 'Vergrößern' },
+        { role: 'zoomOut', label: 'Verkleinern' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: 'Vollbild' }
+      ]
+    }
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+// --- Fenstergröße und Position merken ---
+const windowStatePath = path.join(app.getPath('userData'), 'window-state.json');
+
+function loadWindowState() {
+  try {
+    const raw = fs.readFileSync(windowStatePath, 'utf8');
+    return JSON.parse(raw);
+  } catch (err) {
+    return { width: 980, height: 960 };
+  }
+}
+
+function saveWindowState(win) {
+  if (win.isMaximized()) return; // Beim Maximiert-Schließen die vorherige normale Größe behalten
+  const bounds = win.getBounds();
+  try {
+    fs.writeFileSync(windowStatePath, JSON.stringify(bounds));
+  } catch (err) {
+    logToFile('WARNUNG', `Fenstergröße konnte nicht gespeichert werden: ${err.message}`);
+  }
+}
+
+function createWindow() {
+  const state = loadWindowState();
+
+  const win = new BrowserWindow({
+    width: state.width || 980,
+    height: state.height || 960,
+    x: state.x,
+    y: state.y,
+    minWidth: 640,
+    minHeight: 600,
+    backgroundColor: '#14181A',
+    frame: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  win.loadFile(path.join(__dirname, 'renderer', 'scriptflow.html'));
+
+  // Links, die per window.open() aus dem Tool aufgerufen werden (z. B. "In ChatGPT
+  // öffnen"), sollen im normalen System-Browser landen, nicht in einem neuen
+  // Electron-Fenster ohne Adressleiste.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  // Eigene Titelleiste im Renderer muss wissen, ob das Fenster gerade maximiert
+  // ist, um zwischen Maximieren- und Wiederherstellen-Symbol zu wechseln.
+  const notifyMaximizeState = () => {
+    win.webContents.send('window-maximized-state', win.isMaximized());
+  };
+  win.on('maximize', notifyMaximizeState);
+  win.on('unmaximize', notifyMaximizeState);
+
+  let saveTimeout = null;
+  const scheduleSave = () => {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => saveWindowState(win), 400);
+  };
+  win.on('resize', scheduleSave);
+  win.on('move', scheduleSave);
+  win.on('close', () => saveWindowState(win));
+
+  return win;
+}
+
+app.whenReady().then(() => {
+  // --- Lokale-Schriften-Berechtigung automatisch erteilen ---
+  // Diese App ist vertrauenswürdiger, selbst installierter Code, kein fremder
+  // Webseiten-Inhalt, deswegen muss das Chromium-Berechtigungsfenster für
+  // "lokale Schriften auslesen" hier nicht bei jedem Nutzer einzeln aufpoppen.
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'local-fonts') { callback(true); return; }
+    callback(false);
+  });
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    return permission === 'local-fonts';
+  });
+
+  createWindow();
+  buildAppMenu();
+
+  // --- Auto Update: prüft bei jedem Start gegen die GitHub Releases dieses
+  // Repositories. Wichtig: Erst nutzbar, sobald echte Releases (nicht nur
+  // Workflow Artifacts) über GitHub Actions veröffentlicht werden, siehe
+  // .github/workflows/build-windows.yml und die "publish" Angabe unten in
+  // package.json, dort muss "owner" auf deinen tatsächlichen GitHub
+  // Nutzernamen angepasst werden.
+  try {
+    autoUpdater.checkForUpdatesAndNotify();
+  } catch (err) {
+    logToFile('WARNUNG', `Auto Update Prüfung fehlgeschlagen: ${err.message}`);
+  }
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+autoUpdater.on('error', (err) => {
+  logToFile('FEHLER', `Auto Update Fehler: ${err.message}`);
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+
+// --- HeyGen: läuft hier im Hauptprozess (echtes Node), damit Browser CORS
+// Beschränkungen keine Rolle spielen. Der Renderer redet nur über die
+// sichere Brücke in preload.js mit diesen Handlern, nie direkt mit HeyGen.
+
+async function heygenFetch(url, options) {
+  try {
+    const res = await fetch(url, options);
+    let data = null;
+    try { data = await res.json(); } catch (err) { /* Antwort war kein JSON */ }
+    if (!res.ok) logToFile('WARNUNG', `HeyGen Anfrage an ${url} fehlgeschlagen: ${res.status}`);
+    return { ok: res.ok, status: res.status, data };
+  } catch (err) {
+    logToFile('FEHLER', `HeyGen Anfrage an ${url} nicht durchführbar: ${err.message}`);
+    return { ok: false, status: 0, data: null };
+  }
+}
+
+ipcMain.handle('heygen-upload-audio', async (event, { apiKey, base64Audio, mimeType }) => {
+  const buffer = Buffer.from(base64Audio, 'base64');
+  const boundary = `----ScriptflowBoundary${Date.now()}`;
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio"\r\nContent-Type: ${mimeType}\r\n\r\n`),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--\r\n`)
+  ]);
+  return heygenFetch('https://api.heygen.com/v3/assets', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`
+    },
+    body
+  });
+});
+
+ipcMain.handle('heygen-list-avatars', async (event, { apiKey }) => {
+  return heygenFetch('https://api.heygen.com/v2/avatars', {
+    headers: { 'x-api-key': apiKey }
+  });
+});
+
+ipcMain.handle('heygen-create-video', async (event, { apiKey, payload }) => {
+  return heygenFetch('https://api.heygen.com/v2/video/generate', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+});
+
+ipcMain.handle('heygen-video-status', async (event, { apiKey, videoId }) => {
+  return heygenFetch(`https://api.heygen.com/v1/video_status.get?video_id=${encodeURIComponent(videoId)}`, {
+    headers: { 'x-api-key': apiKey }
+  });
+});
+
+// --- Zielordner: einmal wählen, danach landen HeyGen Videos automatisch dort ---
+
+ipcMain.handle('get-app-version', () => app.getVersion());
+
+// ---------------------------------------------------------------------------
+// TEMPORÄR, NUR FÜR DIE ENTWICKLUNGSPHASE: Ersetzt renderer/scriptflow.html
+// durch eine vom Nutzer ausgewählte Datei (z. B. aus dem Downloads Ordner)
+// und lädt das Fenster neu. Funktioniert nur, wenn die App unverpackt über
+// "npm start" läuft, nicht in einer fertig installierten exe, weil der
+// Renderer-Ordner dort schreibgeschützt beziehungsweise in einem Archiv
+// verpackt ist. Diesen ganzen Block plus den zugehörigen Button in der
+// Titelleiste (siehe scriptflow.html) wieder entfernen, sobald die
+// Entwicklung abgeschlossen ist.
+// ---------------------------------------------------------------------------
+ipcMain.handle('dev-replace-renderer-html', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+
+  const confirmResult = await dialog.showMessageBox(win, {
+    type: 'question',
+    buttons: ['Abbrechen', 'Datei wählen'],
+    defaultId: 1,
+    cancelId: 0,
+    title: 'Entwicklungsversion laden',
+    message: 'Ersetzt die aktuell laufende scriptflow.html durch eine neue Datei und lädt die App neu. Fortfahren?'
+  });
+  if (confirmResult.response !== 1) return { ok: false, canceled: true };
+
+  const pickResult = await dialog.showOpenDialog(win, {
+    title: 'Neue scriptflow.html auswählen',
+    defaultPath: app.getPath('downloads'),
+    filters: [{ name: 'HTML Datei', extensions: ['html'] }],
+    properties: ['openFile']
+  });
+  if (pickResult.canceled || !pickResult.filePaths.length) return { ok: false, canceled: true };
+
+  const targetPath = path.join(__dirname, 'renderer', 'scriptflow.html');
+  try {
+    fs.copyFileSync(pickResult.filePaths[0], targetPath);
+    logToFile('INFO', `Entwicklungsversion ersetzt aus ${pickResult.filePaths[0]}`);
+    win.reload();
+    return { ok: true };
+  } catch (err) {
+    logToFile('FEHLER', `Ersetzen der renderer HTML fehlgeschlagen: ${err.message}`);
+    return {
+      ok: false,
+      error: `${err.message} — funktioniert nur, wenn die App unverpackt über "npm start" läuft, nicht in einer installierten exe.`
+    };
+  }
+});
+
+// --- Eigene Titelleiste: Minimieren, Maximieren, Schließen ---
+ipcMain.on('window-minimize', (event) => {
+  BrowserWindow.fromWebContents(event.sender)?.minimize();
+});
+ipcMain.on('window-maximize-toggle', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  if (win.isMaximized()) win.unmaximize();
+  else win.maximize();
+});
+ipcMain.on('window-close', (event) => {
+  BrowserWindow.fromWebContents(event.sender)?.close();
+});
+ipcMain.handle('window-is-maximized', (event) => {
+  return BrowserWindow.fromWebContents(event.sender)?.isMaximized() || false;
+});
+
+// --- Aktionen aus dem "..." Menü der eigenen Titelleiste, dieselben wie im
+// klassischen Anwendungsmenü, nur über das eigene UI statt Alt-Taste erreichbar ---
+ipcMain.handle('show-about-dialog', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Über Scriptflow',
+    message: 'Scriptflow',
+    detail: `Version ${app.getVersion()}\nvon Andreas\n\nSkript zu Audio und Untertitel, ein Klick, drei Formate.`
+  });
+  return { ok: true };
+});
+ipcMain.handle('check-for-updates', () => {
+  try {
+    autoUpdater.checkForUpdatesAndNotify();
+    return { ok: true };
+  } catch (err) {
+    logToFile('WARNUNG', `Manuelle Update-Prüfung fehlgeschlagen: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('open-log-folder', () => {
+  shell.showItemInFolder(logFilePath);
+  return { ok: true, path: logFilePath };
+});
+
+ipcMain.handle('pick-folder', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Zielordner für HeyGen Videos wählen'
+  });
+  if (result.canceled || !result.filePaths.length) return { canceled: true };
+  return { canceled: false, path: result.filePaths[0] };
+});
+
+ipcMain.handle('save-video-to-folder', async (event, { videoUrl, folderPath, filename }) => {
+  try {
+    if (!fs.existsSync(folderPath)) {
+      return { ok: false, error: 'Zielordner existiert nicht mehr, bitte neu wählen.' };
+    }
+    const res = await fetch(videoUrl);
+    if (!res.ok) return { ok: false, error: `Download fehlgeschlagen (${res.status})` };
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const fullPath = path.join(folderPath, filename);
+    fs.writeFileSync(fullPath, buffer);
+    logToFile('INFO', `Video gespeichert unter ${fullPath}`);
+    return { ok: true, path: fullPath };
+  } catch (err) {
+    logToFile('FEHLER', `Video konnte nicht gespeichert werden: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+});
+
+// --- Google Docs: reiner Text-Export ohne Google Login, funktioniert nur bei
+// Dokumenten, die auf "Jeder mit Link kann ansehen" freigegeben sind. Läuft
+// hier im Hauptprozess, damit Browser CORS Beschränkungen keine Rolle spielen. ---
+ipcMain.handle('fetch-google-doc-text', async (event, docId) => {
+  try {
+    const res = await fetch(`https://docs.google.com/document/d/${docId}/export?format=txt`);
+    if (!res.ok) {
+      return { ok: false, error: `Dokument nicht abrufbar (${res.status}). Ist es auf "Jeder mit Link" freigegeben?` };
+    }
+    const text = await res.text();
+    // Google liefert bei fehlender Freigabe manchmal trotzdem Status 200, aber
+    // eine HTML Anmeldeseite statt echtem Text zurück, das hier fängt den
+    // offensichtlichsten Fall davon ab.
+    if (text.trim().startsWith('<') || text.includes('accounts.google.com')) {
+      return { ok: false, error: 'Dokument scheint nicht öffentlich freigegeben zu sein (Anmeldeseite statt Text erhalten).' };
+    }
+    return { ok: true, text };
+  } catch (err) {
+    logToFile('FEHLER', `Google Doc Export fehlgeschlagen: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+});
