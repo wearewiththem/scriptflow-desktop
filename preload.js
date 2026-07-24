@@ -6,7 +6,9 @@ contextBridge.exposeInMainWorld('desktopBridge', {
   getAppVersion: () =>
     ipcRenderer.invoke('get-app-version'),
   fetchGoogleDocText: (docId) =>
-    ipcRenderer.invoke('fetch-google-doc-text', docId)
+    ipcRenderer.invoke('fetch-google-doc-text', docId),
+  showLastDownloadInFolder: () =>
+    ipcRenderer.invoke('show-last-download')
 });
 
 contextBridge.exposeInMainWorld('windowControls', {

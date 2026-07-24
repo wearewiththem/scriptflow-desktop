@@ -7,6 +7,7 @@ const { autoUpdater } = require('electron-updater');
 // Probleme bei dir oder bei Kollegen nachvollziehen lassen, ohne dass ihr
 // die Entwicklerkonsole öffnen müsst. ---
 const logFilePath = path.join(app.getPath('userData'), 'scriptflow.log');
+let lastDownloadPath = null;
 
 function logToFile(level, message) {
   const line = `[${new Date().toISOString()}] [${level}] ${message}\n`;
@@ -157,6 +158,17 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, 'renderer', 'scriptflow.html'));
 
+  // --- Merkt sich, wo die zuletzt heruntergeladene Datei wirklich gelandet ist,
+  // damit "Im Explorer anzeigen" den echten Ort öffnen kann statt zu raten. ---
+  win.webContents.session.on('will-download', (event, item) => {
+    item.once('done', (event2, state) => {
+      if (state === 'completed') {
+        lastDownloadPath = item.getSavePath();
+        logToFile('INFO', `Datei heruntergeladen: ${lastDownloadPath}`);
+      }
+    });
+  });
+
   // Links, die per window.open() aus dem Tool aufgerufen werden (z. B. "In ChatGPT
   // öffnen"), sollen im normalen System-Browser landen, nicht in einem neuen
   // Electron-Fenster ohne Adressleiste.
@@ -229,6 +241,14 @@ app.on('window-all-closed', () => {
 // --- App-Version für Splash Screen und Titelleiste ---
 
 ipcMain.handle('get-app-version', () => app.getVersion());
+
+ipcMain.handle('show-last-download', () => {
+  if (!lastDownloadPath || !fs.existsSync(lastDownloadPath)) {
+    return { ok: false, error: 'Noch keine Datei in dieser Sitzung heruntergeladen.' };
+  }
+  shell.showItemInFolder(lastDownloadPath);
+  return { ok: true, path: lastDownloadPath };
+});
 
 // ---------------------------------------------------------------------------
 // TEMPORÄR, NUR FÜR DIE ENTWICKLUNGSPHASE: Ersetzt renderer/scriptflow.html
