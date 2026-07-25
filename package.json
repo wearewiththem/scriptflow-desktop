@@ -37,7 +37,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "DEIN-GITHUB-NUTZERNAME",
+      "owner": "wearewiththem",
       "repo": "scriptflow-desktop"
     }
   }
