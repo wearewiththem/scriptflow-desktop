@@ -1422,26 +1422,6 @@
       </div>
     </div>
 
-    <div class="onboarding-step" id="onboardStep-trello" style="display: none;">
-      <h2>Trello verbinden</h2>
-      <p class="onboarding-lead">Optional. Damit Skripte direkt aus zugewiesenen Trello Karten importiert werden können.</p>
-      <div class="row">
-        <div class="field">
-          <label for="onboardTrelloKey">API Key</label>
-          <input type="password" id="onboardTrelloKey" class="mono" placeholder="Trello API Key …" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="onboardTrelloToken">Token</label>
-          <input type="password" id="onboardTrelloToken" class="mono" placeholder="Trello Token …" autocomplete="off">
-        </div>
-      </div>
-      <div class="hint" id="onboardTrelloStatus" style="margin: 8px 0 16px;"></div>
-      <div class="row" style="gap: 8px;">
-        <button type="button" class="secondary" data-wizard-skip>Überspringen</button>
-        <button type="button" class="primary" data-wizard-connect="trello">Verbinden &amp; weiter</button>
-      </div>
-    </div>
-
     <div class="onboarding-step" id="onboardStep-done" style="display: none;">
       <h2>Fertig</h2>
       <p class="onboarding-lead">Alles eingerichtet. Weitere Verbindungen oder Änderungen findest du jederzeit über das Zahnrad oben rechts.</p>
@@ -1460,8 +1440,6 @@
     <div class="shortcuts-list">
       <div class="shortcuts-row"><span>Generieren</span><span class="shortcut-key">Strg + Enter</span></div>
       <div class="shortcuts-row"><span>Einstellungen öffnen</span><span class="shortcut-key">Strg + ,</span></div>
-      <div class="shortcuts-row"><span>Zu Trello wechseln</span><span class="shortcut-key">Strg + 1</span></div>
-      <div class="shortcuts-row"><span>Zu Sprache &amp; Untertitel wechseln</span><span class="shortcut-key">Strg + 2</span></div>
       <div class="shortcuts-row"><span>Fenster / Menü schließen</span><span class="shortcut-key">Esc</span></div>
     </div>
   </div>
@@ -1482,37 +1460,6 @@
     <div class="settings-tab-panel" id="settingsConnections">
 
       <div class="fmt-card collapsed">
-        <div class="fmt-head">
-          <div class="fmt-head-left">
-            <button type="button" class="fmt-expand" aria-label="Details anzeigen">+</button>
-            <svg class="conn-logo" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M14.1 0H1.903C.852 0 .002.85 0 1.9v12.19A1.9 1.9 0 0 0 1.902 16h12.199A1.9 1.9 0 0 0 16 14.09V1.9A1.9 1.9 0 0 0 14.1 0M7 11.367a.636.636 0 0 1-.64.633H3.593a.633.633 0 0 1-.63-.633V3.583c0-.348.281-.631.63-.633h2.765c.35.002.632.284.633.633zm6.052-3.5a.633.633 0 0 1-.64.633h-2.78A.636.636 0 0 1 9 7.867V3.583a.636.636 0 0 1 .633-.633h2.778c.35.002.631.285.631.633z"/></svg>
-            <span class="fmt-name">Trello, für Skript Import</span>
-          </div>
-          <span class="conn-dot" id="connDotTrelloSettings"></span>
-        </div>
-        <div class="fmt-body">
-          <div class="row">
-            <div class="field">
-              <label for="trelloApiKey">API Key</label>
-              <input type="password" id="trelloApiKey" class="mono" placeholder="Trello API Key …" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="trelloToken">Token</label>
-              <input type="password" id="trelloToken" class="mono" placeholder="Trello Token …" autocomplete="off">
-            </div>
-          </div>
-          <label class="fmt-toggle-label" style="margin-top: 2px; margin-bottom: 8px;">
-            <input type="checkbox" class="plain-toggle" id="rememberTrelloKey">
-            <span style="font-size: 12.5px; color: var(--text-dim);">Beide auf diesem Gerät merken</span>
-          </label>
-          <div class="key-note">Wird nur im Speicher gehalten (außer Merken aktiviert), ausschließlich an api.trello.com gesendet.</div>
-          <button type="button" class="secondary" id="testTrelloConnectionBtn" style="width: 100%; margin-top: 10px;">Verbindung testen</button>
-          <div class="hint" id="trelloConnectionTestStatus" style="margin-top: 8px;"></div>
-          <div class="hint" style="margin-top: 8px;">API Key unter trello.com/power-ups/admin anlegen (Power-Up erstellen, dort erscheint der Key). Für den Token danach im Browser öffnen und den API Key eintragen: <span class="mono" style="font-size: 10.5px; word-break: break-all;">https://trello.com/1/authorize?expiration=never&scope=read&response_type=token&key=DEIN_KEY</span>, auf Erlauben klicken, den angezeigten Token hier eintragen.</div>
-        </div>
-      </div>
-
-      <div class="fmt-card collapsed" style="margin-top: 10px;">
         <div class="fmt-head">
           <div class="fmt-head-left">
             <button type="button" class="fmt-expand" aria-label="Details anzeigen">+</button>
@@ -1603,12 +1550,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <button type="button" class="sidebar-nav-item active" data-tab="tabTrello">
-        <span class="sidebar-nav-icon"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" d="M14.1 0H1.903C.852 0 .002.85 0 1.9v12.19A1.9 1.9 0 0 0 1.902 16h12.199A1.9 1.9 0 0 0 16 14.09V1.9A1.9 1.9 0 0 0 14.1 0M7 11.367a.636.636 0 0 1-.64.633H3.593a.633.633 0 0 1-.63-.633V3.583c0-.348.281-.631.63-.633h2.765c.35.002.632.284.633.633zm6.052-3.5a.633.633 0 0 1-.64.633h-2.78A.636.636 0 0 1 9 7.867V3.583a.636.636 0 0 1 .633-.633h2.778c.35.002.631.285.631.633z"/></svg></span>
-        <span>Trello</span>
-        <span class="conn-dot" id="connDotTrello"></span>
-      </button>
-      <button type="button" class="sidebar-nav-item" data-tab="tabSprache">
+      <button type="button" class="sidebar-nav-item active" data-tab="tabSprache">
         <span class="sidebar-nav-icon"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M2 8h2l1.5-4 3 8 1.5-4H14"/></svg></span>
         <span>Sprache &amp; Untertitel</span>
         <span class="conn-dot" id="connDotElevenLabs"></span>
@@ -1633,29 +1575,7 @@
   <main class="main-content">
   <div class="wrap">
 
-  <div class="tab-panel" id="tabTrello">
-
-  <div class="step">
-    <div class="step-head">
-      <span class="step-num">01</span>
-      <span class="step-title">Von Trello importieren</span>
-    </div>
-    <div class="hint" id="trelloStatusLine" style="margin-top: 0; margin-bottom: 10px;"></div>
-    <div class="hint" style="margin-bottom: 10px;">Enthält die Kartenbeschreibung einen Google Docs Link, wird automatisch der Text aus dem Dokument geladen, nicht die Beschreibung selbst. Dafür muss das Dokument auf "Jeder mit Link kann ansehen" freigegeben sein, und die Desktop App läuft (Browser Version kann das aus technischen Gründen nicht).</div>
-    <div class="field">
-      <label for="trelloUsernameFilter">Trello Benutzername (leer = eigener Account)</label>
-      <input type="text" id="trelloUsernameFilter" class="mono" placeholder="z. B. andreasholters">
-    </div>
-    <div class="hint" style="margin-top: 6px; margin-bottom: 10px;">Zeigt die Karten, die genau diesem Mitglied zugewiesen sind, nicht nur deine eigenen. Braucht Zugriff auf dieselben Boards. Den Benutzernamen findest du im Trello Profil der Person.</div>
-    <button type="button" class="secondary" id="loadTrelloCardsBtn" style="width: 100%;">Karten laden</button>
-    <div class="hint" id="trelloLoadStatus" style="margin-top: 8px;"></div>
-    <div id="trelloCardsList" class="voice-lib-list"></div>
-    <div class="hint" style="margin-top: 12px;">Sobald du eine Karte übernimmst, wechselt Scriptflow automatisch zu Sprache &amp; Untertitel, damit du direkt weiterarbeiten kannst.</div>
-  </div>
-
-  </div><!-- /tabTrello -->
-
-  <div class="tab-panel" id="tabSprache" style="display: none;">
+  <div class="tab-panel" id="tabSprache">
 
   <div class="step">
     <div class="step-head">
@@ -1961,27 +1881,40 @@
 <script>
 const API_URL = (voiceId) => `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/with-timestamps`;
 
-// Früh deklariert, weil updateConnStrip() weiter unten schon beim Start darauf
-// zugreift, lange bevor der eigentliche Trello-Abschnitt im Code folgt.
-let trelloVerified = false;
-let trelloVerifiedName = '';
+// Früh deklariert, weil updateConnStrip() weiter unten schon beim Start darauf zugreift.
 let elevenLabsVerified = false;
 
 // --- Charakterverwaltung: dynamisch, lokal gespeichert, mit optionalem Bild ---
 const CHAR_STORAGE_KEY = 'elevenlabs_tool_characters';
 const DEFAULT_CHARACTERS = [
-  { id: 'default-stefanie', name: 'Stefanie', voiceId: 'Qy4b2JlSGxY7I9M9Bqxb', image: null },
-  { id: 'default-ute', name: 'Ute', voiceId: '8wPhfH9uUzEMHTmRkoAR', image: null },
+  { id: 'default-stefanie', name: 'Stefanie', voiceId: 'Qy4b2JlSGxY7I9M9Bqxb', image: 'data:image/jpeg;base64,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' },
+  { id: 'default-ute', name: 'Ute', voiceId: '8wPhfH9uUzEMHTmRkoAR', image: 'data:image/jpeg;base64,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' },
 ];
 
 function loadCharacters() {
+  let chars;
   try {
     const raw = localStorage.getItem(CHAR_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    chars = raw ? JSON.parse(raw) : DEFAULT_CHARACTERS.slice();
   } catch (err) {
     console.warn('Konnte Charaktere nicht laden:', err);
+    chars = DEFAULT_CHARACTERS.slice();
   }
-  return DEFAULT_CHARACTERS.slice();
+  // Nachträglich Standardbilder für Stefanie und Ute ergänzen, falls diese
+  // beiden Charaktere schon vorher ohne Bild gespeichert waren, ohne dabei ein
+  // eigenes, später von Hand gesetztes Bild zu überschreiben.
+  let changed = false;
+  chars.forEach(c => {
+    const fallback = DEFAULT_CHARACTERS.find(d => d.id === c.id);
+    if (fallback && !c.image && fallback.image) {
+      c.image = fallback.image;
+      changed = true;
+    }
+  });
+  if (changed) {
+    try { localStorage.setItem(CHAR_STORAGE_KEY, JSON.stringify(chars)); } catch (err) { /* ignorieren */ }
+  }
+  return chars;
 }
 
 function saveCharacters(list) {
@@ -2956,13 +2889,9 @@ apiKeyInput.addEventListener('input', () => { elevenLabsVerified = false; update
 // --- Account-Badge: Name, Tarif und Zeichen-Verbrauch aus /v1/user anzeigen ---
 function updateConnStrip() {
   const elDot = document.getElementById('connDotElevenLabs');
-  const trelloDot = document.getElementById('connDotTrello');
   const elDotS = document.getElementById('connDotElevenLabsSettings');
-  const trelloDotS = document.getElementById('connDotTrelloSettings');
   if (elDot) elDot.classList.toggle('on', elevenLabsVerified);
-  if (trelloDot) trelloDot.classList.toggle('on', trelloVerified);
   if (elDotS) elDotS.classList.toggle('on', elevenLabsVerified);
-  if (trelloDotS) trelloDotS.classList.toggle('on', trelloVerified);
 }
 
 function setConnectedUI(isConnected) {
@@ -3671,199 +3600,6 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
   document.getElementById('settingsOverlay').classList.remove('visible');
 });
 
-// --- Trello: Verbindung merken, Skript Import aus Kartenbeschreibung ---
-const TRELLO_STORAGE_KEY = 'scriptflow_trello_settings';
-const trelloApiKeyInput = document.getElementById('trelloApiKey');
-const trelloTokenInput = document.getElementById('trelloToken');
-const rememberTrelloCheckbox = document.getElementById('rememberTrelloKey');
-
-function updateTrelloStatusLine() {
-  const line = document.getElementById('trelloStatusLine');
-  if (!line) return;
-  if (trelloVerified) {
-    line.innerHTML = `Trello verbunden als ${trelloVerifiedName}.`;
-  } else {
-    line.innerHTML = 'Trello nicht verbunden. <button type="button" class="text-link" data-open-settings="settingsConnections">In Einstellungen verbinden</button>';
-  }
-  updateConnStrip();
-}
-
-async function testTrelloConnection() {
-  const key = trelloApiKeyInput.value.trim();
-  const token = trelloTokenInput.value.trim();
-  const statusEl = document.getElementById('trelloConnectionTestStatus');
-  const btn = document.getElementById('testTrelloConnectionBtn');
-
-  trelloVerified = false;
-  trelloVerifiedName = '';
-
-  if (!key || !token) {
-    statusEl.style.color = 'var(--error)';
-    statusEl.textContent = 'Bitte erst API Key und Token eintragen.';
-    updateTrelloStatusLine();
-    return;
-  }
-
-  statusEl.style.color = 'var(--text-dim)';
-  statusEl.textContent = 'Teste Verbindung …';
-  if (btn) btn.disabled = true;
-
-  try {
-    const params = new URLSearchParams({ key, token, fields: 'fullName,username' });
-    const response = await fetch(`https://api.trello.com/1/members/me?${params.toString()}`);
-    if (!response.ok) throw new Error(response.status === 401 ? 'Key oder Token ungültig.' : `API Fehler ${response.status}`);
-    const data = await response.json();
-    trelloVerified = true;
-    trelloVerifiedName = data.fullName ? `${data.fullName} (@${data.username})` : `@${data.username}`;
-    statusEl.style.color = 'var(--success)';
-    statusEl.textContent = `Verbunden als ${trelloVerifiedName}.`;
-  } catch (err) {
-    statusEl.style.color = 'var(--error)';
-    statusEl.textContent = `Verbindung fehlgeschlagen: ${err.message}`;
-  } finally {
-    if (btn) btn.disabled = false;
-    updateTrelloStatusLine();
-  }
-}
-
-document.getElementById('testTrelloConnectionBtn').addEventListener('click', testTrelloConnection);
-trelloTokenInput.addEventListener('blur', () => {
-  if (trelloApiKeyInput.value.trim() && trelloTokenInput.value.trim()) testTrelloConnection();
-});
-
-function saveTrelloSettings() {
-  const remember = rememberTrelloCheckbox.checked;
-  try {
-    if (remember) {
-      localStorage.setItem(TRELLO_STORAGE_KEY, JSON.stringify({
-        key: trelloApiKeyInput.value.trim(),
-        token: trelloTokenInput.value.trim(),
-        username: document.getElementById('trelloUsernameFilter').value.trim()
-      }));
-    } else {
-      localStorage.removeItem(TRELLO_STORAGE_KEY);
-    }
-  } catch (err) { /* localStorage evtl. nicht verfügbar */ }
-}
-
-try {
-  const savedTrello = JSON.parse(localStorage.getItem(TRELLO_STORAGE_KEY) || 'null');
-  if (savedTrello) {
-    trelloApiKeyInput.value = savedTrello.key || '';
-    trelloTokenInput.value = savedTrello.token || '';
-    document.getElementById('trelloUsernameFilter').value = savedTrello.username || '';
-    rememberTrelloCheckbox.checked = true;
-    if (savedTrello.key && savedTrello.token) testTrelloConnection();
-  }
-} catch (err) { /* localStorage evtl. nicht verfügbar */ }
-
-trelloApiKeyInput.addEventListener('input', () => { trelloVerified = false; updateTrelloStatusLine(); saveTrelloSettings(); });
-trelloTokenInput.addEventListener('input', () => { trelloVerified = false; updateTrelloStatusLine(); saveTrelloSettings(); });
-rememberTrelloCheckbox.addEventListener('change', saveTrelloSettings);
-document.getElementById('trelloUsernameFilter').addEventListener('input', saveTrelloSettings);
-updateTrelloStatusLine();
-
-document.getElementById('loadTrelloCardsBtn').addEventListener('click', async () => {
-  const key = trelloApiKeyInput.value.trim();
-  const token = trelloTokenInput.value.trim();
-  const statusEl = document.getElementById('trelloLoadStatus');
-  const listEl = document.getElementById('trelloCardsList');
-  const usernameFilter = document.getElementById('trelloUsernameFilter').value.trim();
-
-  if (!key || !token) {
-    statusEl.style.color = 'var(--error)';
-    statusEl.textContent = 'Erst API Key und Token in den Einstellungen eintragen.';
-    return;
-  }
-
-  statusEl.style.color = 'var(--text-dim)';
-  statusEl.textContent = usernameFilter ? `Lade Karten für ${usernameFilter} …` : 'Lade eigene zugewiesene Karten …';
-  listEl.innerHTML = '';
-
-  try {
-    const params = new URLSearchParams({
-      key, token,
-      fields: 'name,desc,shortUrl',
-      board: 'true',
-      board_fields: 'name'
-    });
-    const memberSegment = usernameFilter ? encodeURIComponent(usernameFilter) : 'me';
-    const response = await fetch(`https://api.trello.com/1/members/${memberSegment}/cards?${params.toString()}`);
-    if (!response.ok) {
-      if (response.status === 404) throw new Error('Mitglied nicht gefunden, Benutzernamen prüfen.');
-      throw new Error(`API Fehler ${response.status}`);
-    }
-    const cards = await response.json();
-
-    statusEl.style.color = 'var(--success)';
-    const who = usernameFilter || 'dir';
-    statusEl.textContent = cards.length ? `${cards.length} Karten zugewiesen an ${who}.` : `Keine Karten zugewiesen an ${who}.`;
-
-    const GOOGLE_DOC_REGEX = /https:\/\/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/;
-
-    cards.forEach(card => {
-      const item = document.createElement('div');
-      item.className = 'voice-lib-item';
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'voice-lib-name';
-      nameEl.textContent = card.board?.name ? `${card.board.name} — ${card.name}` : card.name;
-      item.appendChild(nameEl);
-
-      const docMatch = card.desc ? card.desc.match(GOOGLE_DOC_REGEX) : null;
-      const docId = docMatch ? docMatch[1] : null;
-
-      const useBtn = document.createElement('button');
-      useBtn.type = 'button';
-      useBtn.className = 'voice-lib-use';
-
-      if (docId) {
-        useBtn.textContent = 'Aus Google Doc importieren';
-        useBtn.addEventListener('click', async () => {
-          if (!window.desktopBridge || !window.desktopBridge.fetchGoogleDocText) {
-            alert('Google Docs Import braucht die Desktop Version (die installierte Scriptflow App).');
-            return;
-          }
-          const original = useBtn.textContent;
-          useBtn.disabled = true;
-          useBtn.textContent = 'Lade Dokument …';
-          const result = await window.desktopBridge.fetchGoogleDocText(docId);
-          useBtn.disabled = false;
-          if (result.ok) {
-            const scriptEl = document.getElementById('script');
-            scriptEl.value = result.text.trim();
-            scriptEl.dispatchEvent(new Event('input', { bubbles: true }));
-            switchToTab('tabSprache');
-            scriptEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            useBtn.textContent = 'Importiert ✓';
-            setTimeout(() => { useBtn.textContent = original; }, 2000);
-          } else {
-            alert(`Google Doc konnte nicht geladen werden: ${result.error}`);
-            useBtn.textContent = original;
-          }
-        });
-      } else {
-        useBtn.textContent = card.desc ? 'Übernehmen' : 'Keine Beschreibung';
-        useBtn.disabled = !card.desc;
-        useBtn.addEventListener('click', () => {
-          const scriptEl = document.getElementById('script');
-          scriptEl.value = card.desc;
-          scriptEl.dispatchEvent(new Event('input', { bubbles: true }));
-          switchToTab('tabSprache');
-          scriptEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-      }
-      item.appendChild(useBtn);
-
-      listEl.appendChild(item);
-    });
-  } catch (err) {
-    console.error(err);
-    statusEl.style.color = 'var(--error)';
-    statusEl.textContent = `Fehler beim Laden: ${err.message}. API Key und Token prüfen.`;
-  }
-});
-
 // --- Versionsnummer: kommt in der Desktop App direkt aus package.json, damit
 // Splash Screen, Header und Titel nie mehr von Hand einzeln nachgezogen werden
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
@@ -3984,7 +3720,7 @@ document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
 
 // --- Einrichtungsassistent: läuft nur beim allerersten Start ---
 const ONBOARDING_DONE_KEY = 'scriptflow_onboarding_complete';
-const ONBOARDING_STEPS = ['welcome', 'elevenlabs', 'trello', 'done'];
+const ONBOARDING_STEPS = ['welcome', 'elevenlabs', 'done'];
 let onboardingStepIndex = 0;
 
 function showOnboardingStep(index) {
@@ -4042,23 +3778,6 @@ document.querySelectorAll('[data-wizard-connect]').forEach(btn => {
         statusEl.style.color = 'var(--error)';
         statusEl.textContent = 'Verbindung fehlgeschlagen, Key prüfen oder später einrichten.';
       }
-    }
-
-    if (service === 'trello') {
-      const key = document.getElementById('onboardTrelloKey').value.trim();
-      const token = document.getElementById('onboardTrelloToken').value.trim();
-      const statusEl = document.getElementById('onboardTrelloStatus');
-      if (!key || !token) { statusEl.style.color = 'var(--error)'; statusEl.textContent = 'Bitte beides eintragen, oder Überspringen wählen.'; btn.disabled = false; return; }
-      trelloApiKeyInput.value = key;
-      trelloTokenInput.value = token;
-      rememberTrelloCheckbox.checked = true;
-      saveTrelloSettings();
-      statusEl.style.color = 'var(--text-dim)';
-      statusEl.textContent = 'Teste Verbindung …';
-      await testTrelloConnection();
-      statusEl.style.color = trelloVerified ? 'var(--success)' : 'var(--error)';
-      statusEl.textContent = trelloVerified ? `Verbunden als ${trelloVerifiedName}.` : 'Verbindung fehlgeschlagen, Zugangsdaten prüfen.';
-      if (trelloVerified) setTimeout(goToNextOnboardingStep, 500);
     }
 
     btn.disabled = false;
@@ -4165,18 +3884,6 @@ document.addEventListener('keydown', (e) => {
   if (ctrl && e.key === ',') {
     e.preventDefault();
     openSettings();
-    return;
-  }
-
-  // Strg+1 / Strg+2: zwischen den beiden Bereichen wechseln
-  if (ctrl && e.key === '1') {
-    e.preventDefault();
-    switchToTab('tabTrello');
-    return;
-  }
-  if (ctrl && e.key === '2') {
-    e.preventDefault();
-    switchToTab('tabSprache');
     return;
   }
 
