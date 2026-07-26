@@ -235,6 +235,8 @@ app.whenReady().then(() => {
 
 autoUpdater.on('error', (err) => {
   logToFile('FEHLER', `Auto Update Fehler: ${err.message}`);
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) win.webContents.send('update-check-finished');
 });
 
 // --- Update wirklich fertig heruntergeladen: jetzt erst das eigene Fenster mit
@@ -313,14 +315,24 @@ ipcMain.handle('check-for-updates', () => {
 // Nur bei einer von Hand ausgelösten Prüfung Bescheid geben, wenn schon alles
 // aktuell ist, die stille Prüfung im Hintergrund soll niemanden unterbrechen.
 autoUpdater.on('update-not-available', () => {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) win.webContents.send('update-check-finished');
   if (!manualUpdateCheckInProgress) return;
   manualUpdateCheckInProgress = false;
-  const win = BrowserWindow.getAllWindows()[0];
   dialog.showMessageBox(win, {
     type: 'info',
     title: 'Kein Update verfügbar',
     message: `Du hast bereits die aktuelle Version (${app.getVersion()}).`
   });
+});
+
+autoUpdater.on('update-available', () => {
+  // Download läuft jetzt im Hintergrund weiter, das eigentliche Popup mit dem
+  // Installieren Knopf kommt erst später über 'update-downloaded'. Die
+  // Ladeanzeige beim manuellen Knopf kann trotzdem schon aufhören zu drehen,
+  // der Nutzer weiß ja jetzt, dass es losgeht.
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) win.webContents.send('update-check-finished');
 });
 
 ipcMain.handle('open-log-folder', () => {

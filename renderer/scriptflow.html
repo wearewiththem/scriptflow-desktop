@@ -266,8 +266,23 @@
     font-family: 'Poppins', sans-serif;
     font-size: 12.5px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .titlebar-menu button:hover { background: var(--panel-2); color: var(--text); }
+  .titlebar-menu button:disabled { cursor: default; opacity: 0.7; }
+  .titlebar-menu button:disabled:hover { background: none; color: var(--text-dim); }
+  .menu-spinner {
+    width: 11px;
+    height: 11px;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: menuSpinnerRotate 0.7s linear infinite;
+  }
+  @keyframes menuSpinnerRotate { to { transform: rotate(360deg); } }
   body.has-titlebar { padding-top: 36px; }
 
   .splash {
@@ -470,16 +485,25 @@
     gap: 10px;
     margin-bottom: 14px;
   }
-  .step-head-select {
+  .step-head-select-label {
     margin-left: auto;
+    align-self: center;
+    font-family: 'Poppins', sans-serif;
+    font-size: 10.5px;
+    color: var(--text-faint);
+  }
+  .step-head-select {
+    align-self: center;
     background: var(--panel-2);
     border: 1px solid var(--line);
     color: var(--text-dim);
     border-radius: 6px;
-    padding: 3px 6px;
+    padding: 3px 4px;
     font-family: 'Poppins', sans-serif;
     font-size: 11px;
     cursor: pointer;
+    width: 108px;
+    flex-shrink: 0;
   }
   .step-head-select:hover { border-color: var(--accent); color: var(--text); }
   .step-num {
@@ -1503,7 +1527,7 @@
         <button type="button" id="menuAboutBtn">Über Scriptflow</button>
         <button type="button" id="menuShortcutsBtn">Tastaturkürzel</button>
         <button type="button" id="menuReplayOnboardingBtn">Einrichtungsassistent erneut anzeigen</button>
-        <button type="button" id="menuUpdateBtn">Nach Updates suchen</button>
+        <button type="button" id="menuUpdateBtn"><span id="menuUpdateSpinner" class="menu-spinner" style="display: none;"></span><span id="menuUpdateLabel">Nach Updates suchen</span></button>
         <button type="button" id="menuLogBtn">Fehlerprotokoll öffnen</button>
       </div>
     </div>
@@ -1749,6 +1773,7 @@
     <div class="step-head">
       <span class="step-num">02</span>
       <span class="step-title">Stimme</span>
+      <span class="step-head-select-label">Modell</span>
       <select id="modelId" class="step-head-select">
         <option value="eleven_multilingual_v2">Multilingual v2</option>
         <option value="eleven_v3" selected>Eleven v3</option>
@@ -1804,15 +1829,17 @@
       </div>
       <div class="fmt-body">
         <p class="step-sub" style="margin-top: 0;">Zeigt automatisch Stimmen aus der kompletten ElevenLabs Stimmenbibliothek, nicht nur deine eigenen gespeicherten. Suchbegriff und Filter sind optional, zum gezielten Eingrenzen.</p>
-        <div class="field">
-          <label for="voiceSearch">Suchbegriff</label>
-          <input type="text" id="voiceSearch" placeholder="z. B. warm, ruhig, Erzähler …">
+        <div class="row">
+          <div class="field">
+            <label for="voiceSearch">Suchbegriff</label>
+            <input type="text" id="voiceSearch" placeholder="z. B. warm, ruhig, Erzähler …">
+          </div>
+          <div class="field">
+            <label for="voiceSearchById">Oder direkt per Voice ID</label>
+            <input type="text" id="voiceSearchById" class="mono" placeholder="z. B. 21m00Tcm4TlvDq8ikWAM">
+          </div>
         </div>
-        <div class="field" style="margin-top: 10px;">
-          <label for="voiceSearchById">Oder direkt per Voice ID</label>
-          <input type="text" id="voiceSearchById" class="mono" placeholder="z. B. 21m00Tcm4TlvDq8ikWAM">
-          <div class="hint" style="margin-top: 6px;">Ist die ID bekannt, ruft das direkt genau diese eine Stimme ab, unabhängig von den Filtern darunter.</div>
-        </div>
+        <div class="hint" style="margin-top: 6px;">Ist die Voice ID bekannt, ruft das direkt genau diese eine Stimme ab, unabhängig vom Suchbegriff und den Filtern darunter.</div>
         <div class="row" style="margin-top: 10px;">
           <div class="field">
             <label for="voiceFilterGender">Geschlecht</label>
@@ -2486,7 +2513,20 @@ function renderVoiceLibrary(voices) {
     starBtn.classList.toggle('active', isFavorited());
     starBtn.setAttribute('aria-label', `${v.name} favorisieren`);
     starBtn.addEventListener('click', () => {
-      if (isFavorited()) return; // schon favorisiert, nichts weiter zu tun
+      const existing = characters.find(c => c.voiceId === v.voice_id);
+      if (existing) {
+        // Schon favorisiert: erneuter Klick entfernt den Charakter wieder.
+        characters = characters.filter(c => c.id !== existing.id);
+        saveCharacters(characters);
+        if (activeCharacterId === existing.id) {
+          activeCharacterId = null;
+          activeVoiceId = '';
+        }
+        renderCharChips();
+        starBtn.innerHTML = '☆';
+        starBtn.classList.remove('active');
+        return;
+      }
       // Bewusst leichtgewichtiger als Übernehmen: kein Bearbeiten-Dialog, landet
       // sofort und ohne Unterbrechung oben bei den Charakteren, genau für den
       // Fall gedacht, schnell mehrere Favoriten hintereinander zu sammeln.
@@ -3973,7 +4013,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.1.0';
+const FALLBACK_VERSION = '2.1.1';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
@@ -4049,9 +4089,35 @@ if (window.windowControls) {
     menu.classList.remove('visible');
   });
   document.getElementById('menuUpdateBtn').addEventListener('click', () => {
+    const btn = document.getElementById('menuUpdateBtn');
+    const spinner = document.getElementById('menuUpdateSpinner');
+    const label = document.getElementById('menuUpdateLabel');
+    btn.disabled = true;
+    spinner.style.display = 'inline-block';
+    label.textContent = 'Prüfe auf Updates …';
     window.windowControls.checkForUpdates();
-    menu.classList.remove('visible');
+    // Menü bewusst noch offen lassen, damit die Ladeanzeige auch wirklich zu
+    // sehen ist, statt sofort zu verschwinden. Schließt automatisch, sobald
+    // die Antwort da ist (siehe onUpdateCheckFinished weiter unten).
+    setTimeout(() => {
+      if (!btn.disabled) return; // ist schon regulär zurückgesetzt worden
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      label.textContent = 'Nach Updates suchen';
+    }, 15000);
   });
+
+  if (window.windowControls.onUpdateCheckFinished) {
+    window.windowControls.onUpdateCheckFinished(() => {
+      const btn = document.getElementById('menuUpdateBtn');
+      const spinner = document.getElementById('menuUpdateSpinner');
+      const label = document.getElementById('menuUpdateLabel');
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      label.textContent = 'Nach Updates suchen';
+      menu.classList.remove('visible');
+    });
+  }
   document.getElementById('menuLogBtn').addEventListener('click', () => {
     if (window.desktopBridge && window.desktopBridge.openLogFolder) window.desktopBridge.openLogFolder();
     menu.classList.remove('visible');

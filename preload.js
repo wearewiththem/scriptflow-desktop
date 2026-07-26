@@ -22,5 +22,8 @@ contextBridge.exposeInMainWorld('windowControls', {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   onShowAboutOverlay: (callback) => {
     ipcRenderer.on('show-about-overlay', () => callback());
+  },
+  onUpdateCheckFinished: (callback) => {
+    ipcRenderer.on('update-check-finished', () => callback());
   }
 });
