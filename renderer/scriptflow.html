@@ -851,6 +851,31 @@
   .warning-banner p { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; }
 
   .tab-nav { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--line-soft); }
+
+  .mode-switcher {
+    display: flex;
+    gap: 4px;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+  .mode-switch-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    border-radius: 7px;
+    color: var(--text-dim);
+    font-family: 'Poppins', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 9px 10px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .mode-switch-btn:hover { color: var(--text); }
+  .mode-switch-btn.active { background: var(--accent); color: var(--accent-text); }
   .tab-btn {
     background: none;
     border: none;
@@ -1829,12 +1854,18 @@
 
   <div class="tab-panel" id="tabSprache">
 
+  <div class="mode-switcher">
+    <button type="button" class="mode-switch-btn active" data-mode="generate">Neue Stimme generieren</button>
+    <button type="button" class="mode-switch-btn" data-mode="existing">Bestehendes Audio hochladen</button>
+  </div>
+
   <div class="step">
     <div class="step-head">
       <span class="step-num">01</span>
-      <span class="step-title">Skript</span>
+      <span class="step-title" id="step01Title">Skript</span>
     </div>
 
+    <div id="modeContentGenerate01">
     <div class="field">
       <label for="script">Text</label>
       <textarea id="script" placeholder="Dein Skript hier einfügen …"></textarea>
@@ -1858,9 +1889,22 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <div id="modeContentExisting01" style="display: none;">
+      <div class="hint" style="margin-bottom: 10px;">Lädt die fertige Vertonung hoch, ElevenLabs richtet dein Transkript daneben automatisch am Ton aus. Zählt wie jede andere ElevenLabs Nutzung gegen dein Kontingent, die Datei wird dafür hochgeladen.</div>
+      <div class="field">
+        <label for="existingAudioFile">Audiodatei</label>
+        <input type="file" id="existingAudioFile" accept="audio/*">
+      </div>
+      <div class="field">
+        <label for="existingAudioScript">Transkript</label>
+        <textarea id="existingAudioScript" placeholder="Den genauen gesprochenen Text hier einfügen …"></textarea>
+      </div>
+    </div>
   </div>
 
-  <div class="step">
+  <div class="step" id="stepStimme">
     <div class="step-head">
       <span class="step-num">02</span>
       <span class="step-title">Stimme</span>
@@ -2105,12 +2149,13 @@
       </div>
     </div>
 
-    <div class="field" style="margin-top: 14px;">
+    <div class="field" id="modeContentGenerate04a" style="margin-top: 14px;">
       <label for="fileNameInput">Dateiname (optional)</label>
       <input type="text" id="fileNameInput" class="mono" placeholder="z. B. ac_meta39v1_2026_07_int_gsueberrascht">
     </div>
-    <div class="hint" style="margin-top: -8px; margin-bottom: 14px;">Leer lassen für automatischen Namen aus Charakter und Datum, z. B. stefanie_2026-07-17.</div>
+    <div class="hint" id="modeContentGenerate04b" style="margin-top: -8px; margin-bottom: 14px;">Leer lassen für automatischen Namen aus Charakter und Datum, z. B. stefanie_2026-07-17.</div>
 
+    <div id="modeContentGenerate04c">
     <div class="field" style="max-width: 220px;">
       <label for="outputFormat">Ausgabeformat</label>
       <select id="outputFormat">
@@ -2124,6 +2169,28 @@
     <div class="status" id="status">
       <div class="bars" id="bars"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
       <span id="statusText">Generiere …</span>
+    </div>
+    </div>
+
+    <div id="modeContentExisting04" style="display: none;">
+      <button type="button" class="secondary" id="alignExistingAudioBtn" style="width: 100%;">Untertitel erstellen</button>
+      <div class="hint" id="existingAudioStatus" style="margin-top: 8px;"></div>
+
+      <div id="existingAudioOutput" style="display: none; margin-top: 14px;">
+        <button class="secondary" id="dlExistingAudioTrimmed" style="width: 100%; margin-bottom: 10px; display: none;">Gekürztes Audio (WAV) herunterladen</button>
+        <div class="fmt-card" data-fmt="square">
+          <div class="fmt-head"><span class="fmt-name">SRT 1:1</span></div>
+          <button class="secondary" id="dlExistingSquare">SRT 1:1 herunterladen</button>
+        </div>
+        <div class="fmt-card" data-fmt="vertical">
+          <div class="fmt-head"><span class="fmt-name">SRT 9:16</span></div>
+          <button class="secondary" id="dlExistingVertical">SRT 9:16 herunterladen</button>
+        </div>
+        <div class="fmt-card" data-fmt="wide">
+          <div class="fmt-head"><span class="fmt-name">SRT 16:9</span></div>
+          <button class="secondary" id="dlExistingWide">SRT 16:9 herunterladen</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2160,45 +2227,6 @@
     <div class="fmt-card" id="resultWide" data-fmt="wide">
       <div class="fmt-head"><span class="fmt-name">SRT 16:9</span><span class="meta" id="metaWide"></span></div>
       <button class="secondary fmt-dl" id="dlWide">SRT 16:9 herunterladen</button>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-head">
-      <span class="step-num">•</span>
-      <span class="step-title">Vorhandenes Audio</span>
-    </div>
-    <div class="hint">Hast du schon eine fertige Vertonung und nur das passende Transkript dazu? ElevenLabs richtet Text und Ton für dich aneinander aus, danach kannst du die Untertitel wie gewohnt für alle drei Formate herunterladen, optional auch mit gekürzten Pausen.</div>
-
-    <div class="field" style="margin-top: 10px;">
-      <label for="existingAudioFile">Audiodatei</label>
-      <input type="file" id="existingAudioFile" accept="audio/*">
-    </div>
-    <div class="field">
-      <label for="existingAudioScript">Transkript</label>
-      <textarea id="existingAudioScript" placeholder="Den genauen gesprochenen Text hier einfügen …"></textarea>
-    </div>
-    <label class="fmt-toggle-label">
-      <input type="checkbox" class="plain-toggle" id="existingAudioTrimPauses">
-      <span style="font-size: 12.5px; color: var(--text-dim);">Pausen auch hier kürzen, nutzt dieselben Einstellungen wie oben bei der Generierung</span>
-    </label>
-    <button type="button" class="secondary" id="alignExistingAudioBtn" style="width: 100%; margin-top: 10px;">Untertitel erstellen</button>
-    <div class="hint" id="existingAudioStatus" style="margin-top: 8px;"></div>
-
-    <div id="existingAudioOutput" style="display: none; margin-top: 14px;">
-      <button class="secondary" id="dlExistingAudioTrimmed" style="width: 100%; margin-bottom: 10px; display: none;">Gekürztes Audio (WAV) herunterladen</button>
-      <div class="fmt-card" data-fmt="square">
-        <div class="fmt-head"><span class="fmt-name">SRT 1:1</span></div>
-        <button class="secondary" id="dlExistingSquare">SRT 1:1 herunterladen</button>
-      </div>
-      <div class="fmt-card" data-fmt="vertical">
-        <div class="fmt-head"><span class="fmt-name">SRT 9:16</span></div>
-        <button class="secondary" id="dlExistingVertical">SRT 9:16 herunterladen</button>
-      </div>
-      <div class="fmt-card" data-fmt="wide">
-        <div class="fmt-head"><span class="fmt-name">SRT 16:9</span></div>
-        <button class="secondary" id="dlExistingWide">SRT 16:9 herunterladen</button>
-      </div>
     </div>
   </div>
 
@@ -3801,6 +3829,31 @@ Object.keys(DL_MAP).forEach(id => {
 let existingAudioTrimmedBlob = null;
 const existingSrtBlobs = {};
 
+// --- Weiche ganz am Anfang: neue Stimme generieren oder bestehendes Audio
+// hochladen. Blendet je nach Wahl die nicht relevanten Bereiche komplett aus,
+// statt beides gleichzeitig zu zeigen. ---
+document.querySelectorAll('.mode-switch-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.mode;
+    document.querySelectorAll('.mode-switch-btn').forEach(b => b.classList.toggle('active', b === btn));
+
+    const isExisting = mode === 'existing';
+    document.getElementById('modeContentGenerate01').style.display = isExisting ? 'none' : 'block';
+    document.getElementById('modeContentExisting01').style.display = isExisting ? 'block' : 'none';
+    document.getElementById('step01Title').textContent = isExisting ? 'Audio' : 'Skript';
+    document.getElementById('stepStimme').style.display = isExisting ? 'none' : 'block';
+    document.getElementById('modeContentGenerate04a').style.display = isExisting ? 'none' : 'block';
+    document.getElementById('modeContentGenerate04b').style.display = isExisting ? 'none' : 'block';
+    document.getElementById('modeContentGenerate04c').style.display = isExisting ? 'none' : 'block';
+    document.getElementById('modeContentExisting04').style.display = isExisting ? 'block' : 'none';
+    if (isExisting) {
+      document.getElementById('output').style.display = 'none';
+    } else if (lastAudioBlob) {
+      document.getElementById('output').style.display = 'block';
+    }
+  });
+});
+
 document.getElementById('alignExistingAudioBtn').addEventListener('click', async () => {
   const apiKey = document.getElementById('apiKey').value.trim();
   const fileInput = document.getElementById('existingAudioFile');
@@ -3814,7 +3867,7 @@ document.getElementById('alignExistingAudioBtn').addEventListener('click', async
   if (!scriptText) { statusEl.style.color = 'var(--error)'; statusEl.textContent = 'Das Transkript darf nicht leer sein.'; return; }
 
   const file = fileInput.files[0];
-  const trimEnabled = document.getElementById('existingAudioTrimPauses').checked;
+  const trimEnabled = document.getElementById('trimPauses').checked;
 
   btn.disabled = true;
   outputEl.style.display = 'none';
@@ -4316,7 +4369,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.3.0';
+const FALLBACK_VERSION = '2.3.1';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
