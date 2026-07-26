@@ -1476,6 +1476,27 @@
     transition: transform 0.15s, background 0.15s, color 0.15s;
   }
   .char-chip-fav:hover { transform: scale(1.15); background: var(--error); border-color: var(--error); color: #fff; }
+  .char-chip-play {
+    position: absolute;
+    top: 48px;
+    left: 6px;
+    width: 17px;
+    height: 17px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--text-dim);
+    font-size: 8px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    transition: transform 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .char-chip:hover .char-chip-play { display: flex; }
+  .char-chip-play:hover { transform: scale(1.15); border-color: var(--accent); color: var(--accent); }
 
   .voice-lib-list { max-height: 320px; overflow-y: auto; margin-top: 10px; }
   .voice-lib-item {
@@ -2316,6 +2337,57 @@ function renderCharChips() {
       fallback.textContent = initials(ch.name);
       chip.appendChild(fallback);
     }
+
+    const playBadge = document.createElement('button');
+    playBadge.type = 'button';
+    playBadge.className = 'char-chip-play';
+    playBadge.innerHTML = '▶';
+    playBadge.setAttribute('aria-label', `${ch.name} anhören`);
+    playBadge.addEventListener('click', async (e) => {
+      e.stopPropagation();
+
+      const stopThis = () => {
+        if (currentPreviewAudio) { currentPreviewAudio.pause(); currentPreviewAudio = null; }
+        playBadge.innerHTML = '▶';
+        currentStopFn = null;
+      };
+
+      // Läuft diese Vorschau schon, zweiter Klick stoppt sie einfach wieder.
+      if (currentStopFn === stopThis) { stopThis(); return; }
+      if (currentStopFn) currentStopFn();
+
+      const apiKey = document.getElementById('apiKey').value.trim();
+      if (!apiKey) { alert('Erst oben den ElevenLabs API Key eintragen.'); return; }
+
+      playBadge.innerHTML = '⋯';
+      try {
+        let url = ch.previewUrl;
+        if (!url) {
+          const response = await fetch(`https://api.elevenlabs.io/v1/voices/${encodeURIComponent(ch.voiceId)}`, {
+            headers: { 'xi-api-key': apiKey }
+          });
+          if (!response.ok) throw new Error('Vorschau nicht gefunden.');
+          const voice = await response.json();
+          url = voice.preview_url;
+          ch.previewUrl = url; // für diese Sitzung merken, kein erneuter Abruf nötig
+        }
+        if (!url) { playBadge.innerHTML = '▶'; alert('Für diese Stimme gibt es keine Hörprobe.'); return; }
+
+        const audio = new Audio(url);
+        currentPreviewAudio = audio;
+        currentStopFn = stopThis;
+        playBadge.innerHTML = '⏸';
+        audio.play();
+        audio.addEventListener('ended', () => {
+          if (currentStopFn === stopThis) { playBadge.innerHTML = '▶'; currentStopFn = null; currentPreviewAudio = null; }
+        });
+      } catch (err) {
+        console.warn(err);
+        playBadge.innerHTML = '▶';
+        alert('Vorschau konnte nicht geladen werden.');
+      }
+    });
+    chip.appendChild(playBadge);
 
     if (ch.favorited) {
       const favBadge = document.createElement('button');
@@ -4369,7 +4441,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.3.1';
+const FALLBACK_VERSION = '2.3.2';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
