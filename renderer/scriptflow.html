@@ -4157,7 +4157,8 @@ if (window.windowControls) {
     openAboutOverlay();
     menu.classList.remove('visible');
   });
-  document.getElementById('menuUpdateBtn').addEventListener('click', () => {
+  document.getElementById('menuUpdateBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
     const btn = document.getElementById('menuUpdateBtn');
     const spinner = document.getElementById('menuUpdateSpinner');
     const label = document.getElementById('menuUpdateLabel');
