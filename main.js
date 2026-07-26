@@ -248,6 +248,20 @@ autoUpdater.on('error', (err) => {
   logToFile('FEHLER', `Auto Update Fehler: ${err.message}`);
   const win = BrowserWindow.getAllWindows()[0];
   if (win) win.webContents.send('update-check-finished');
+  // Nur bei einer von Hand ausgelösten Prüfung eine Meldung zeigen, die
+  // automatische Prüfung im Hintergrund soll bei einem einzelnen Netzwerk-
+  // Ausrutscher nicht ständig ein Fenster aufreißen.
+  if (!manualUpdateCheckInProgress) return;
+  manualUpdateCheckInProgress = false;
+  const friendly = err.message.includes('No published versions')
+    ? 'Für dieses Programm ist bislang keine öffentlich sichtbare Version bei GitHub hinterlegt.'
+    : err.message;
+  dialog.showMessageBox(win, {
+    type: 'error',
+    title: 'Update-Prüfung fehlgeschlagen',
+    message: 'Die Prüfung auf Updates ist fehlgeschlagen.',
+    detail: friendly
+  });
 });
 
 // --- Update wirklich fertig heruntergeladen: jetzt erst das eigene Fenster mit

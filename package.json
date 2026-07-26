@@ -1,6 +1,6 @@
 {
   "name": "scriptflow",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Scriptflow – Skript zu Audio und Untertitel, ein Klick, drei Formate",
   "main": "main.js",
   "author": "Andreas",
@@ -38,7 +38,9 @@
     "publish": {
       "provider": "github",
       "owner": "wearewiththem",
-      "repo": "scriptflow-desktop"
+      "repo": "scriptflow-desktop",
+      "draft": false,
+      "releaseType": "release"
     }
   }
 }
