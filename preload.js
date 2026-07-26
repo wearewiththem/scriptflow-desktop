@@ -19,8 +19,8 @@ contextBridge.exposeInMainWorld('windowControls', {
   onMaximizedState: (callback) => {
     ipcRenderer.on('window-maximized-state', (event, isMaximized) => callback(isMaximized));
   },
-  showAboutDialog: () => ipcRenderer.invoke('show-about-dialog'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
-  // TEMPORÄR, nur Entwicklungsphase, siehe Kommentar in main.js
-  devReplaceRendererHtml: () => ipcRenderer.invoke('dev-replace-renderer-html')
+  onShowAboutOverlay: (callback) => {
+    ipcRenderer.on('show-about-overlay', () => callback());
+  }
 });

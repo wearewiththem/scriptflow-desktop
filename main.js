@@ -59,19 +59,16 @@ function buildAppMenu() {
         {
           label: 'Über Scriptflow',
           click: () => {
-            dialog.showMessageBox({
-              type: 'info',
-              title: 'Über Scriptflow',
-              message: 'Scriptflow',
-              detail: `Version ${app.getVersion()}\nvon Andreas\n\nSkript zu Audio und Untertitel, ein Klick, drei Formate.`
-            });
+            const win = BrowserWindow.getAllWindows()[0];
+            if (win) win.webContents.send('show-about-overlay');
           }
         },
         {
           label: 'Nach Updates suchen',
           click: () => {
             try {
-              autoUpdater.checkForUpdatesAndNotify();
+              manualUpdateCheckInProgress = true;
+              autoUpdater.checkForUpdates();
             } catch (err) {
               logToFile('WARNUNG', `Manuelle Update-Prüfung fehlgeschlagen: ${err.message}`);
             }
@@ -220,10 +217,16 @@ app.whenReady().then(() => {
   // package.json, dort muss "owner" auf deinen tatsächlichen GitHub
   // Nutzernamen angepasst werden.
   try {
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates();
   } catch (err) {
     logToFile('WARNUNG', `Auto Update Prüfung fehlgeschlagen: ${err.message}`);
   }
+
+  // Läuft die App länger im Hintergrund, ohne dass jemand sie neu startet,
+  // würde sonst nie geprüft werden. Alle 4 Stunden nochmal automatisch nachsehen.
+  setInterval(() => {
+    try { autoUpdater.checkForUpdates(); } catch (err) { /* wird über 'error' Event geloggt */ }
+  }, 4 * 60 * 60 * 1000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -232,6 +235,30 @@ app.whenReady().then(() => {
 
 autoUpdater.on('error', (err) => {
   logToFile('FEHLER', `Auto Update Fehler: ${err.message}`);
+});
+
+// --- Update wirklich fertig heruntergeladen: jetzt erst das eigene Fenster mit
+// Installieren Knopf zeigen. Klickt jemand auf Installieren, beendet sich die
+// App, installiert die neue Version, und startet automatisch neu, kein
+// manuelles Neu-Öffnen nötig. "Später" lässt die App normal weiterlaufen, die
+// heruntergeladene Version wird beim nächsten regulären Beenden trotzdem
+// automatisch installiert. ---
+autoUpdater.on('update-downloaded', (info) => {
+  logToFile('INFO', `Update heruntergeladen: Version ${info.version}`);
+  const win = BrowserWindow.getAllWindows()[0];
+  dialog.showMessageBox(win, {
+    type: 'info',
+    title: 'Update verfügbar',
+    message: `Scriptflow ${info.version} ist bereit.`,
+    detail: 'Die neue Version wurde bereits heruntergeladen. Jetzt installieren und neu starten, oder später, dann installiert sie sich automatisch beim nächsten Beenden der App.',
+    buttons: ['Jetzt installieren', 'Später'],
+    defaultId: 0,
+    cancelId: 1
+  }).then((result) => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
 });
 
 app.on('window-all-closed', () => {
@@ -248,52 +275,6 @@ ipcMain.handle('show-last-download', () => {
   }
   shell.showItemInFolder(lastDownloadPath);
   return { ok: true, path: lastDownloadPath };
-});
-
-// ---------------------------------------------------------------------------
-// TEMPORÄR, NUR FÜR DIE ENTWICKLUNGSPHASE: Ersetzt renderer/scriptflow.html
-// durch eine vom Nutzer ausgewählte Datei (z. B. aus dem Downloads Ordner)
-// und lädt das Fenster neu. Funktioniert nur, wenn die App unverpackt über
-// "npm start" läuft, nicht in einer fertig installierten exe, weil der
-// Renderer-Ordner dort schreibgeschützt beziehungsweise in einem Archiv
-// verpackt ist. Diesen ganzen Block plus den zugehörigen Button in der
-// Titelleiste (siehe scriptflow.html) wieder entfernen, sobald die
-// Entwicklung abgeschlossen ist.
-// ---------------------------------------------------------------------------
-ipcMain.handle('dev-replace-renderer-html', async (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender);
-
-  const confirmResult = await dialog.showMessageBox(win, {
-    type: 'question',
-    buttons: ['Abbrechen', 'Datei wählen'],
-    defaultId: 1,
-    cancelId: 0,
-    title: 'Entwicklungsversion laden',
-    message: 'Ersetzt die aktuell laufende scriptflow.html durch eine neue Datei und lädt die App neu. Fortfahren?'
-  });
-  if (confirmResult.response !== 1) return { ok: false, canceled: true };
-
-  const pickResult = await dialog.showOpenDialog(win, {
-    title: 'Neue scriptflow.html auswählen',
-    defaultPath: app.getPath('downloads'),
-    filters: [{ name: 'HTML Datei', extensions: ['html'] }],
-    properties: ['openFile']
-  });
-  if (pickResult.canceled || !pickResult.filePaths.length) return { ok: false, canceled: true };
-
-  const targetPath = path.join(__dirname, 'renderer', 'scriptflow.html');
-  try {
-    fs.copyFileSync(pickResult.filePaths[0], targetPath);
-    logToFile('INFO', `Entwicklungsversion ersetzt aus ${pickResult.filePaths[0]}`);
-    win.reload();
-    return { ok: true };
-  } catch (err) {
-    logToFile('FEHLER', `Ersetzen der renderer HTML fehlgeschlagen: ${err.message}`);
-    return {
-      ok: false,
-      error: `${err.message} — funktioniert nur, wenn die App unverpackt über "npm start" läuft, nicht in einer installierten exe.`
-    };
-  }
 });
 
 // --- Eigene Titelleiste: Minimieren, Maximieren, Schließen ---
@@ -315,23 +296,31 @@ ipcMain.handle('window-is-maximized', (event) => {
 
 // --- Aktionen aus dem "..." Menü der eigenen Titelleiste, dieselben wie im
 // klassischen Anwendungsmenü, nur über das eigene UI statt Alt-Taste erreichbar ---
-ipcMain.handle('show-about-dialog', () => {
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'Über Scriptflow',
-    message: 'Scriptflow',
-    detail: `Version ${app.getVersion()}\nvon Andreas\n\nSkript zu Audio und Untertitel, ein Klick, drei Formate.`
-  });
-  return { ok: true };
-});
+let manualUpdateCheckInProgress = false;
+
 ipcMain.handle('check-for-updates', () => {
   try {
-    autoUpdater.checkForUpdatesAndNotify();
+    manualUpdateCheckInProgress = true;
+    autoUpdater.checkForUpdates();
     return { ok: true };
   } catch (err) {
+    manualUpdateCheckInProgress = false;
     logToFile('WARNUNG', `Manuelle Update-Prüfung fehlgeschlagen: ${err.message}`);
     return { ok: false, error: err.message };
   }
+});
+
+// Nur bei einer von Hand ausgelösten Prüfung Bescheid geben, wenn schon alles
+// aktuell ist, die stille Prüfung im Hintergrund soll niemanden unterbrechen.
+autoUpdater.on('update-not-available', () => {
+  if (!manualUpdateCheckInProgress) return;
+  manualUpdateCheckInProgress = false;
+  const win = BrowserWindow.getAllWindows()[0];
+  dialog.showMessageBox(win, {
+    type: 'info',
+    title: 'Kein Update verfügbar',
+    message: `Du hast bereits die aktuelle Version (${app.getVersion()}).`
+  });
 });
 
 ipcMain.handle('open-log-folder', () => {

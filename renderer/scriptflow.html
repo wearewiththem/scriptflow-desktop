@@ -608,6 +608,82 @@
     50% { transform: scaleY(1); opacity: 1; }
   }
 
+  .audio-player-card { padding: 16px; }
+  .audio-player { display: flex; align-items: center; gap: 12px; }
+  .audio-play-btn {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
+  }
+  .audio-play-btn:hover { filter: brightness(1.08); }
+  .audio-play-btn:active { transform: scale(0.95); }
+  .audio-play-btn svg { width: 18px; height: 18px; }
+  .audio-progress-wrap { position: relative; flex: 1; height: 20px; display: flex; align-items: center; }
+  .audio-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 4px;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .audio-seek {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  .audio-seek::-webkit-slider-runnable-track {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+  }
+  .audio-seek::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--accent-text);
+    border: 2px solid var(--accent);
+    margin-top: -4.5px;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .audio-seek:hover::-webkit-slider-thumb { transform: scale(1.15); }
+  .audio-seek::-moz-range-track { height: 4px; background: var(--line); border-radius: 2px; }
+  .audio-seek::-moz-range-thumb {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--accent-text);
+    border: 2px solid var(--accent);
+    cursor: pointer;
+  }
+  .audio-time {
+    flex-shrink: 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+
   .output {
     display: none;
     background: var(--panel);
@@ -962,6 +1038,28 @@
     margin-bottom: 18px;
   }
   .settings-panel label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 6px; }
+
+  .about-panel { text-align: center; }
+  .about-logo { width: 44px; height: 44px; margin: 4px 0 12px; }
+  .about-name {
+    font-family: 'Poppins', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .about-version {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 2px 10px;
+    margin-bottom: 16px;
+  }
+  .about-author { font-size: 13px; color: var(--text-dim); margin-bottom: 4px; }
+  .about-copyright { font-size: 11.5px; color: var(--text-faint); }
 
   .shortcuts-list { display: flex; flex-direction: column; gap: 4px; }
   .shortcuts-row {
@@ -1389,9 +1487,9 @@
       <div class="titlebar-menu titlebar-menu-right" id="titlebarMenu">
         <button type="button" id="menuAboutBtn">Über Scriptflow</button>
         <button type="button" id="menuShortcutsBtn">Tastaturkürzel</button>
+        <button type="button" id="menuReplayOnboardingBtn">Einrichtungsassistent erneut anzeigen</button>
         <button type="button" id="menuUpdateBtn">Nach Updates suchen</button>
         <button type="button" id="menuLogBtn">Fehlerprotokoll öffnen</button>
-        <button type="button" id="menuDevReplaceBtn" style="color: var(--accent);">⚠ Entwicklungsversion laden</button>
       </div>
     </div>
     <button type="button" class="titlebar-btn" id="titlebarMinBtn" aria-label="Minimieren">─</button>
@@ -1453,6 +1551,23 @@
   </div>
 </div>
 
+<div class="settings-overlay" id="aboutOverlay">
+  <div class="settings-panel about-panel" style="max-width: 320px;">
+    <div class="settings-panel-head">
+      <span class="fmt-name">Über Scriptflow</span>
+      <button type="button" id="aboutCloseBtn" class="fmt-expand" aria-label="Schließen">×</button>
+    </div>
+    <svg class="about-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 24 H13" stroke="var(--text-dim)" stroke-width="3" stroke-linecap="round"/>
+      <path d="M13 24 C 17 24, 17 10, 21 10 S 25 38, 29 38 S 33 24, 44 24" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <div class="about-name">Scriptflow</div>
+    <div class="about-version" id="aboutVersionText">v2.0</div>
+    <div class="about-author">Andreas Hölters</div>
+    <div class="about-copyright" id="aboutCopyrightText"></div>
+  </div>
+</div>
+
 <div class="settings-overlay" id="shortcutsOverlay">
   <div class="settings-panel" style="max-width: 380px;">
     <div class="settings-panel-head">
@@ -1502,8 +1617,6 @@
           <div class="key-note">Wird nur im Speicher gehalten (außer Merken aktiviert), ausschließlich an elevenlabs.io gesendet. Verbindungsstatus siehe Badge unten links.</div>
         </div>
       </div>
-
-      <button type="button" class="secondary" id="replayOnboardingBtn" style="width: 100%; margin-top: 14px;">Einrichtungsassistent erneut anzeigen</button>
 
     </div>
 
@@ -1614,7 +1727,7 @@
       <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.6"/></svg>
       Betonungs-Prompt für KI kopieren
     </button>
-    <div class="hint">Kopiert den Prompt zusammen mit deinem Skript oben in einem Rutsch in die Zwischenablage. In einen neuen Chat einfügen, senden, die KI gibt dir den Text mit Audio Tags zurück, den fügst du dann hier oben ein.</div>
+    <div class="hint">Kopiere den Prompt zusammen mit deinem Skript oben in einem Rutsch in die Zwischenablage. In einen neuen Chat einfügen, senden, die KI gibt dir den Text mit Audio Tags zurück, den fügst du dann hier oben ein.</div>
   </div>
 
   <div class="step">
@@ -1649,6 +1762,11 @@
           <label for="newCharVoiceId">Voice ID</label>
           <input type="text" id="newCharVoiceId" class="mono" placeholder="z. B. 21m00Tcm4TlvDq8ikWAM">
         </div>
+      </div>
+      <div class="field">
+        <label for="newCharOriginalName">ElevenLabs Originalname (optional)</label>
+        <input type="text" id="newCharOriginalName" placeholder="z. B. Stefanie (Warm, Erzählerin)">
+        <div class="hint" style="margin-top: 6px;">Damit du die Stimme bei Bedarf schnell auf elevenlabs.io wiederfindest, unabhängig davon wie du sie hier nennst. Wird beim Übernehmen aus der Stimmenbibliothek automatisch eingetragen.</div>
       </div>
       <div class="field">
         <label for="newCharImage">Bild (optional)</label>
@@ -1873,8 +1991,22 @@
       <label style="margin-bottom: 0;">Ergebnis</label>
       <button type="button" class="secondary" id="showInFolderBtn" style="width: auto; margin-left: auto; display: none; font-size: 12px; padding: 6px 12px;">Im Explorer anzeigen</button>
     </div>
-    <audio id="audioPlayer" controls></audio>
-    <button class="secondary" id="downloadMp3" style="width: 100%; margin-bottom: 16px;">MP3 herunterladen</button>
+
+    <div class="fmt-card audio-player-card">
+      <audio id="audioPlayer" preload="metadata"></audio>
+      <div class="audio-player">
+        <button type="button" class="audio-play-btn" id="audioPlayBtn" aria-label="Abspielen">
+          <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="display:none;"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <div class="audio-progress-wrap">
+          <input type="range" id="audioSeek" class="audio-seek" min="0" max="1000" value="0" step="1">
+          <div class="audio-progress-fill" id="audioProgressFill"></div>
+        </div>
+        <span class="audio-time" id="audioTimeLabel">0:00 / 0:00</span>
+      </div>
+      <button class="secondary" id="downloadMp3" style="width: 100%; margin-top: 14px;">MP3 herunterladen</button>
+    </div>
 
     <div class="fmt-card" id="resultSquare" data-fmt="square">
       <div class="fmt-head"><span class="fmt-name">SRT 1:1</span><span class="meta" id="metaSquare"></span></div>
@@ -1981,7 +2113,9 @@ function renderCharChips() {
     const nameSpan = document.createElement('span');
     nameSpan.className = 'char-chip-name';
     nameSpan.textContent = displayName;
-    chip.title = ch.name;
+    chip.title = (ch.originalName && ch.originalName !== ch.name)
+      ? `${ch.name} — ElevenLabs: ${ch.originalName}`
+      : ch.name;
     chip.appendChild(nameSpan);
 
     const editBtn = document.createElement('button');
@@ -2072,6 +2206,7 @@ function openCharEditor(charId) {
 
   document.getElementById('newCharName').value = ch.name;
   document.getElementById('newCharVoiceId').value = ch.voiceId;
+  document.getElementById('newCharOriginalName').value = ch.originalName || '';
   document.getElementById('newCharImage').value = '';
   document.getElementById('currentImageHint').style.display = ch.image ? 'block' : 'none';
   document.getElementById('charFormTitle').textContent = `${ch.name} bearbeiten`;
@@ -2088,6 +2223,7 @@ function resetCharForm() {
   editingCharId = null;
   document.getElementById('newCharName').value = '';
   document.getElementById('newCharVoiceId').value = '';
+  document.getElementById('newCharOriginalName').value = '';
   document.getElementById('newCharImage').value = '';
   document.getElementById('currentImageHint').style.display = 'none';
   document.getElementById('charFormTitle').textContent = 'Charakter hinzufügen';
@@ -2115,11 +2251,13 @@ document.getElementById('closeCharFormBtn').addEventListener('click', closeCharF
 document.getElementById('addCharBtn').addEventListener('click', async () => {
   const nameInput = document.getElementById('newCharName');
   const voiceIdInput = document.getElementById('newCharVoiceId');
+  const originalNameInput = document.getElementById('newCharOriginalName');
   const imageInput = document.getElementById('newCharImage');
   const statusEl = document.getElementById('addCharStatus');
 
   const name = nameInput.value.trim();
   const voiceId = voiceIdInput.value.trim();
+  const originalName = originalNameInput.value.trim();
   if (!name || !voiceId) {
     statusEl.style.color = 'var(--error)';
     statusEl.textContent = 'Name und Voice ID werden beide gebraucht.';
@@ -2138,7 +2276,7 @@ document.getElementById('addCharBtn').addEventListener('click', async () => {
   if (editingCharId) {
     const idx = characters.findIndex(c => c.id === editingCharId);
     if (idx !== -1) {
-      characters[idx] = { ...characters[idx], name, voiceId, image };
+      characters[idx] = { ...characters[idx], name, voiceId, originalName, image };
       if (activeCharacterId === editingCharId) activeVoiceId = voiceId;
     }
     saveCharacters(characters);
@@ -2149,7 +2287,7 @@ document.getElementById('addCharBtn').addEventListener('click', async () => {
     return;
   }
 
-  const newChar = { id: `char-${Date.now()}`, name, voiceId, image };
+  const newChar = { id: `char-${Date.now()}`, name, voiceId, originalName, image };
   characters.push(newChar);
   saveCharacters(characters);
   renderCharChips();
@@ -2299,7 +2437,7 @@ function renderVoiceLibrary(voices) {
       // Direkt einen neuen Charakter mit dieser Stimme anlegen und sofort als
       // aktiv markieren, statt nur ein Formular vorzubefüllen, das vorher noch
       // einen zusätzlichen, nirgends erklärten Speichern-Klick brauchte.
-      const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, image: null };
+      const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, originalName: v.name, image: null };
       characters.push(newChar);
       saveCharacters(characters);
       activeCharacterId = newChar.id;
@@ -3267,6 +3405,69 @@ document.getElementById('showInFolderBtn').addEventListener('click', async () =>
   if (!result.ok) alert(result.error);
 });
 
+// --- Eigener Audio-Player: ersetzt den nativen Browser-Riegel, der farblich
+// nicht zum dunklen Design passt, durch passend gestaltete eigene Bedienelemente. ---
+(function setupCustomAudioPlayer() {
+  const audio = document.getElementById('audioPlayer');
+  const playBtn = document.getElementById('audioPlayBtn');
+  const iconPlay = playBtn.querySelector('.icon-play');
+  const iconPause = playBtn.querySelector('.icon-pause');
+  const seek = document.getElementById('audioSeek');
+  const fill = document.getElementById('audioProgressFill');
+  const timeLabel = document.getElementById('audioTimeLabel');
+  let isSeeking = false;
+
+  const fmt = (s) => {
+    if (!isFinite(s) || s < 0) s = 0;
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${String(sec).padStart(2, '0')}`;
+  };
+
+  playBtn.addEventListener('click', () => {
+    if (!audio.src) return;
+    if (audio.paused) audio.play(); else audio.pause();
+  });
+
+  audio.addEventListener('play', () => {
+    iconPlay.style.display = 'none';
+    iconPause.style.display = '';
+    playBtn.setAttribute('aria-label', 'Pausieren');
+  });
+  audio.addEventListener('pause', () => {
+    iconPlay.style.display = '';
+    iconPause.style.display = 'none';
+    playBtn.setAttribute('aria-label', 'Abspielen');
+  });
+  audio.addEventListener('ended', () => {
+    iconPlay.style.display = '';
+    iconPause.style.display = 'none';
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    if (isSeeking || !audio.duration) return;
+    const pct = (audio.currentTime / audio.duration) * 1000;
+    seek.value = pct;
+    fill.style.width = `${pct / 10}%`;
+    timeLabel.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
+  });
+  audio.addEventListener('loadedmetadata', () => {
+    timeLabel.textContent = `${fmt(0)} / ${fmt(audio.duration)}`;
+  });
+
+  seek.addEventListener('input', () => {
+    isSeeking = true;
+    fill.style.width = `${seek.value / 10}%`;
+    if (audio.duration) {
+      timeLabel.textContent = `${fmt((seek.value / 1000) * audio.duration)} / ${fmt(audio.duration)}`;
+    }
+  });
+  seek.addEventListener('change', () => {
+    if (audio.duration) audio.currentTime = (seek.value / 1000) * audio.duration;
+    isSeeking = false;
+  });
+})();
+
 document.getElementById('downloadMp3').addEventListener('click', () => {
   if (!lastAudioBlob) return;
   const a = document.createElement('a');
@@ -3325,54 +3526,54 @@ const THEMES = {
       '--error': '#F87171', '--success': '#4ADE80'
     }
   },
-  aurora: {
-    label: 'Aurora', preview: 'linear-gradient(to top, #a18cd1 0%, #fbc2eb 100%)',
+  forst: {
+    label: 'Forst', preview: 'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)',
     glass: true,
-    bgImage: 'linear-gradient(to top, #a18cd1 0%, #fbc2eb 100%)',
+    bgImage: 'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)',
     vars: {
-      '--bg': '#c9a8dd', '--panel': 'rgba(255,255,255,0.55)', '--panel-2': 'rgba(255,255,255,0.35)',
-      '--line': 'rgba(255,255,255,0.55)', '--line-soft': 'rgba(255,255,255,0.35)',
-      '--text': '#2B2438', '--text-dim': '#5C4F6E', '--text-faint': '#8A7A9C',
-      '--accent': '#7C3AED', '--accent-dim': 'rgba(124,58,237,0.22)', '--accent-text': '#FFFFFF',
-      '--error': '#C4453A', '--success': '#2E8B57'
-    },
-    textLight: {
-      '--text': '#FBF7FF', '--text-dim': '#E4D9F0', '--text-faint': '#C7B3DE',
-      '--panel': 'rgba(28,18,42,0.62)', '--panel-2': 'rgba(28,18,42,0.42)',
-      '--line': 'rgba(255,255,255,0.2)', '--line-soft': 'rgba(255,255,255,0.12)'
-    }
-  },
-  spektrum: {
-    label: 'Spektrum', preview: 'linear-gradient(to right, #3ab5b0 0%, #3d99be 31%, #56317a 100%)',
-    glass: true,
-    bgImage: 'linear-gradient(to right, #3ab5b0 0%, #3d99be 31%, #56317a 100%)',
-    vars: {
-      '--bg': '#3d99be', '--panel': 'rgba(255,255,255,0.5)', '--panel-2': 'rgba(255,255,255,0.32)',
+      '--bg': '#B5F18D', '--panel': 'rgba(255,255,255,0.5)', '--panel-2': 'rgba(255,255,255,0.32)',
       '--line': 'rgba(255,255,255,0.55)', '--line-soft': 'rgba(255,255,255,0.32)',
-      '--text': '#1C2B3A', '--text-dim': '#41556A', '--text-faint': '#6F8494',
-      '--accent': '#2563EB', '--accent-dim': 'rgba(37,99,235,0.22)', '--accent-text': '#FFFFFF',
+      '--text': '#1B2E12', '--text-dim': '#3F5A33', '--text-faint': '#6B8A5C',
+      '--accent': '#2F6E1A', '--accent-dim': 'rgba(47,110,26,0.22)', '--accent-text': '#FFFFFF',
       '--error': '#C4453A', '--success': '#1F7A5C'
     },
     textLight: {
-      '--text': '#F1F0F7', '--text-dim': '#C7C2DA', '--text-faint': '#9089AC',
-      '--panel': 'rgba(14,22,32,0.45)', '--panel-2': 'rgba(14,22,32,0.28)',
+      '--text': '#EEFBE6', '--text-dim': '#C9E8BB', '--text-faint': '#9BC98A',
+      '--panel': 'rgba(14,28,8,0.62)', '--panel-2': 'rgba(14,28,8,0.42)',
       '--line': 'rgba(255,255,255,0.2)', '--line-soft': 'rgba(255,255,255,0.12)'
     }
   },
-  sunset: {
-    label: 'Sunset', preview: 'linear-gradient(135deg, #FF6B6B 0%, #FFA751 55%, #FFD452 100%)',
+  ozean: {
+    label: 'Ozean', preview: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
     glass: true,
-    bgImage: 'linear-gradient(135deg, #FF6B6B 0%, #FFA751 55%, #FFD452 100%)',
+    bgImage: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
     vars: {
-      '--bg': '#FF9868', '--panel': 'rgba(255,255,255,0.5)', '--panel-2': 'rgba(255,255,255,0.32)',
+      '--bg': '#78CEFE', '--panel': 'rgba(255,255,255,0.5)', '--panel-2': 'rgba(255,255,255,0.32)',
       '--line': 'rgba(255,255,255,0.55)', '--line-soft': 'rgba(255,255,255,0.32)',
-      '--text': '#3D1F0A', '--text-dim': '#6B4226', '--text-faint': '#9C7150',
-      '--accent': '#C2410C', '--accent-dim': 'rgba(194,65,12,0.22)', '--accent-text': '#FFFFFF',
-      '--error': '#C4453A', '--success': '#15803D'
+      '--text': '#16233F', '--text-dim': '#3A4E72', '--text-faint': '#6A80A8',
+      '--accent': '#1E3A6E', '--accent-dim': 'rgba(30,58,110,0.22)', '--accent-text': '#FFFFFF',
+      '--error': '#C4453A', '--success': '#1F7A5C'
     },
     textLight: {
-      '--text': '#FFF3E8', '--text-dim': '#F3D9C4', '--text-faint': '#D9B08A',
-      '--panel': 'rgba(40,20,10,0.68)', '--panel-2': 'rgba(40,20,10,0.48)',
+      '--text': '#EAF0FC', '--text-dim': '#C3D3EE', '--text-faint': '#93AAD6',
+      '--panel': 'rgba(8,16,32,0.62)', '--panel-2': 'rgba(8,16,32,0.42)',
+      '--line': 'rgba(255,255,255,0.2)', '--line-soft': 'rgba(255,255,255,0.12)'
+    }
+  },
+  bloom: {
+    label: 'Bloom', preview: 'linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%)',
+    glass: true,
+    bgImage: 'linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%)',
+    vars: {
+      '--bg': '#F6BCC4', '--panel': 'rgba(255,255,255,0.5)', '--panel-2': 'rgba(255,255,255,0.32)',
+      '--line': 'rgba(255,255,255,0.55)', '--line-soft': 'rgba(255,255,255,0.32)',
+      '--text': '#4A1710', '--text-dim': '#7A4034', '--text-faint': '#A97267',
+      '--accent': '#A8241A', '--accent-dim': 'rgba(168,36,26,0.22)', '--accent-text': '#FFFFFF',
+      '--error': '#C4453A', '--success': '#1F7A5C'
+    },
+    textLight: {
+      '--text': '#FDECE9', '--text-dim': '#EFC5BE', '--text-faint': '#D69A8E',
+      '--panel': 'rgba(35,10,6,0.62)', '--panel-2': 'rgba(35,10,6,0.42)',
       '--line': 'rgba(255,255,255,0.2)', '--line-soft': 'rgba(255,255,255,0.12)'
     }
   }
@@ -3432,19 +3633,19 @@ function applyTheme(themeName, customAccent) {
 
 document.getElementById('glassTextDarkBtn').addEventListener('click', () => {
   glassTextMode = 'dark';
-  const activeTheme = document.querySelector('.theme-swatch.active')?.dataset.theme || 'dunkel';
+  const activeTheme = document.querySelector('.theme-swatch.active')?.dataset.theme || 'slate';
   applyTheme(activeTheme, currentAccentHex);
   saveThemeSettings();
 });
 document.getElementById('glassTextLightBtn').addEventListener('click', () => {
   glassTextMode = 'light';
-  const activeTheme = document.querySelector('.theme-swatch.active')?.dataset.theme || 'dunkel';
+  const activeTheme = document.querySelector('.theme-swatch.active')?.dataset.theme || 'slate';
   applyTheme(activeTheme, currentAccentHex);
   saveThemeSettings();
 });
 
 function saveThemeSettings() {
-  const themeName = document.querySelector('.theme-swatch.active')?.dataset.theme || 'dunkel';
+  const themeName = document.querySelector('.theme-swatch.active')?.dataset.theme || 'slate';
   const accent = currentAccentHex;
   try {
     localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ themeName, accent, glassTextMode }));
@@ -3460,7 +3661,7 @@ function loadThemeSettings() {
   } catch (err) {
     console.warn('Theme Einstellungen nicht ladbar:', err);
   }
-  return { themeName: 'dunkel', accent: null, glassTextMode: 'dark' };
+  return { themeName: 'slate', accent: null, glassTextMode: 'dark' };
 }
 
 // --- Farbrad: Farbton/Sättigung per Kreis, Helligkeit per Regler ---
@@ -3561,7 +3762,7 @@ function setAccentFromHsl(h, s, l, opts = {}) {
   document.getElementById('lightnessSlider').value = Math.round(l);
   refreshColorReadout();
   if (!opts.skipApply) {
-    const activeTheme = document.querySelector('.theme-swatch.active')?.dataset.theme || 'dunkel';
+    const activeTheme = document.querySelector('.theme-swatch.active')?.dataset.theme || 'slate';
     applyTheme(activeTheme, currentAccentHex);
   }
 }
@@ -3635,7 +3836,7 @@ let panelSnapshot = null;
 
 function takeSnapshot() {
   return {
-    themeName: document.querySelector('.theme-swatch.active')?.dataset.theme || 'dunkel',
+    themeName: document.querySelector('.theme-swatch.active')?.dataset.theme || 'slate',
     accentHex: currentAccentHex,
     glassTextMode
   };
@@ -3749,8 +3950,25 @@ if (window.windowControls) {
   });
   document.addEventListener('click', () => menu.classList.remove('visible'));
 
+  function openAboutOverlay() {
+    const versionEl = document.getElementById('aboutVersionText');
+    const copyrightEl = document.getElementById('aboutCopyrightText');
+    if (versionEl) versionEl.textContent = document.getElementById('brandVersionText')?.textContent || 'v2.0';
+    if (copyrightEl) copyrightEl.textContent = `© ${new Date().getFullYear()} Andreas Hölters`;
+    document.getElementById('aboutOverlay').classList.add('visible');
+  }
+  document.getElementById('aboutCloseBtn').addEventListener('click', () => {
+    document.getElementById('aboutOverlay').classList.remove('visible');
+  });
+  document.getElementById('aboutOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'aboutOverlay') document.getElementById('aboutOverlay').classList.remove('visible');
+  });
+  if (window.windowControls.onShowAboutOverlay) {
+    window.windowControls.onShowAboutOverlay(openAboutOverlay);
+  }
+
   document.getElementById('menuAboutBtn').addEventListener('click', () => {
-    window.windowControls.showAboutDialog();
+    openAboutOverlay();
     menu.classList.remove('visible');
   });
   document.getElementById('menuUpdateBtn').addEventListener('click', () => {
@@ -3761,22 +3979,6 @@ if (window.windowControls) {
     if (window.desktopBridge && window.desktopBridge.openLogFolder) window.desktopBridge.openLogFolder();
     menu.classList.remove('visible');
   });
-  // TEMPORÄR, nur Entwicklungsphase: Button plus Handler wieder entfernen,
-  // sobald nicht mehr laufend neue Versionen von scriptflow.html verteilt werden.
-  const devReplaceBtn = document.getElementById('menuDevReplaceBtn');
-  if (devReplaceBtn) {
-    devReplaceBtn.addEventListener('click', async () => {
-      menu.classList.remove('visible');
-      if (!window.windowControls || !window.windowControls.devReplaceRendererHtml) {
-        alert('Nur in der Desktop Version verfügbar.');
-        return;
-      }
-      const result = await window.windowControls.devReplaceRendererHtml();
-      if (!result.ok && !result.canceled) {
-        alert(`Ersetzen fehlgeschlagen: ${result.error}`);
-      }
-    });
-  }
 }
 
 
@@ -3883,7 +4085,8 @@ try {
   // localStorage nicht verfügbar, Assistent bleibt aus, kein Blockieren des Tools
 }
 
-document.getElementById('replayOnboardingBtn').addEventListener('click', () => {
+document.getElementById('menuReplayOnboardingBtn').addEventListener('click', () => {
+  document.getElementById('titlebarMenu').classList.remove('visible');
   document.getElementById('settingsOverlay').classList.remove('visible');
   document.getElementById('onboardingOverlay').style.display = 'flex';
   showOnboardingStep(0);
@@ -3979,10 +4182,13 @@ document.addEventListener('keydown', (e) => {
 
   // Escape: das jeweils oberste offene Fenster schließen, nicht mehrere auf einmal
   if (e.key === 'Escape') {
+    const about = document.getElementById('aboutOverlay');
     const shortcuts = document.getElementById('shortcutsOverlay');
     const settings = document.getElementById('settingsOverlay');
     const titlebarMenu = document.getElementById('titlebarMenu');
-    if (shortcuts.classList.contains('visible')) {
+    if (about.classList.contains('visible')) {
+      about.classList.remove('visible');
+    } else if (shortcuts.classList.contains('visible')) {
       shortcuts.classList.remove('visible');
     } else if (settings.classList.contains('visible')) {
       settings.classList.remove('visible');
