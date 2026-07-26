@@ -469,6 +469,18 @@
     gap: 10px;
     margin-bottom: 14px;
   }
+  .step-head-select {
+    margin-left: auto;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    border-radius: 6px;
+    padding: 3px 6px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .step-head-select:hover { border-color: var(--accent); color: var(--text); }
   .step-num {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
@@ -1272,7 +1284,7 @@
   .voice-lib-item:last-child { border-bottom: none; }
   .voice-lib-name { font-size: 13px; color: var(--text); flex: 1; }
   .voice-lib-cat { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--text-faint); }
-  .voice-lib-play, .voice-lib-use {
+  .voice-lib-play, .voice-lib-use, .voice-lib-stop {
     background: var(--panel-2);
     border: 1px solid var(--line);
     color: var(--accent);
@@ -1282,7 +1294,8 @@
     cursor: pointer;
     flex-shrink: 0;
   }
-  .voice-lib-play:hover, .voice-lib-use:hover { border-color: var(--accent); }
+  .voice-lib-play:hover, .voice-lib-use:hover, .voice-lib-stop:not(:disabled):hover { border-color: var(--accent); }
+  .voice-lib-stop:disabled { opacity: 0.35; cursor: default; color: var(--text-faint); }
   .fmt-toggle-label { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; }
   .fmt-toggle, .plain-toggle { width: auto; accent-color: var(--accent); cursor: pointer; }
   .fmt-card.disabled { opacity: 0.4; }
@@ -1607,7 +1620,11 @@
   <div class="step">
     <div class="step-head">
       <span class="step-num">02</span>
-      <span class="step-title">Stimme und Zugang</span>
+      <span class="step-title">Stimme</span>
+      <select id="modelId" class="step-head-select">
+        <option value="eleven_multilingual_v2">Multilingual v2</option>
+        <option value="eleven_v3" selected>Eleven v3</option>
+      </select>
     </div>
     <div class="hint" id="elevenLabsStatusLine" style="margin-bottom: 0;"></div>
 
@@ -1699,14 +1716,6 @@
         <div id="voiceLibraryStatus" class="hint" style="margin-top: 8px;"></div>
         <div id="voiceLibraryList" class="voice-lib-list"></div>
       </div>
-    </div>
-
-    <div class="field" style="margin-top: 14px;">
-      <label for="modelId">Modell</label>
-      <select id="modelId">
-        <option value="eleven_multilingual_v2">Multilingual v2 — Standard, stabil</option>
-        <option value="eleven_v3" selected>Eleven v3 — Audio Tags, experimentell</option>
-      </select>
     </div>
   </div>
 
@@ -2154,7 +2163,7 @@ document.getElementById('addCharBtn').addEventListener('click', async () => {
 
 // --- Stimmen-Bibliothek: ElevenLabs Voice Library durchsuchen, mit echten Filtern und Hörprobe ---
 let currentPreviewAudio = null;
-let currentPreviewBtn = null;
+let currentStopFn = null;
 let voiceLibraryLoadedOnce = false;
 
 async function searchVoiceLibrary() {
@@ -2206,6 +2215,18 @@ async function searchVoiceLibrary() {
 
 document.getElementById('loadVoicesBtn').addEventListener('click', searchVoiceLibrary);
 
+// Geschlecht, Sprache und Alter wenden sich direkt bei Auswahl an, nur das
+// Textfeld für den Suchbegriff bleibt bewusst manuell (Enter oder Knopf),
+// damit nicht bei jedem Tastendruck eine neue Anfrage losgeht.
+['voiceFilterGender', 'voiceFilterLanguage', 'voiceFilterAge'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    if (voiceLibraryLoadedOnce) searchVoiceLibrary();
+  });
+});
+document.getElementById('voiceSearch').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); searchVoiceLibrary(); }
+});
+
 function renderVoiceLibrary(voices) {
   const listEl = document.getElementById('voiceLibraryList');
   listEl.innerHTML = '';
@@ -2231,35 +2252,42 @@ function renderVoiceLibrary(voices) {
       playBtn.type = 'button';
       playBtn.className = 'voice-lib-play';
       playBtn.textContent = '▶';
+      playBtn.setAttribute('aria-label', `${v.name} anhören`);
+
+      const stopBtn = document.createElement('button');
+      stopBtn.type = 'button';
+      stopBtn.className = 'voice-lib-stop';
+      stopBtn.textContent = '■';
+      stopBtn.setAttribute('aria-label', `${v.name} stoppen`);
+      stopBtn.disabled = true;
+
+      const stopThis = () => {
+        if (currentPreviewAudio) { currentPreviewAudio.pause(); currentPreviewAudio = null; }
+        item.classList.remove('playing');
+        stopBtn.disabled = true;
+        currentStopFn = null;
+      };
+
       playBtn.addEventListener('click', () => {
-        const wasThisPlaying = currentPreviewAudio && currentPreviewBtn === playBtn && !currentPreviewAudio.paused;
-
-        // Läuft gerade eine andere oder dieselbe Vorschau, erst sauber stoppen
-        // und deren Zeile wieder normal darstellen, bevor etwas Neues beginnt.
-        if (currentPreviewAudio) {
-          currentPreviewAudio.pause();
-          currentPreviewAudio = null;
-        }
-        if (currentPreviewBtn) {
-          currentPreviewBtn.textContent = '▶';
-          currentPreviewBtn.closest('.voice-lib-item')?.classList.remove('playing');
-          currentPreviewBtn = null;
-        }
-
-        if (wasThisPlaying) return; // war schon diese Zeile: einfach nur stoppen, nicht neu starten
-
+        // Läuft gerade eine andere Vorschau, erst sauber stoppen, bevor diese hier beginnt.
+        if (currentStopFn) currentStopFn();
         const audio = new Audio(v.preview_url);
         currentPreviewAudio = audio;
-        currentPreviewBtn = playBtn;
-        playBtn.textContent = '⏸';
+        currentStopFn = stopThis;
         item.classList.add('playing');
+        stopBtn.disabled = false;
         audio.play();
         audio.addEventListener('ended', () => {
-          playBtn.textContent = '▶';
           item.classList.remove('playing');
-          if (currentPreviewBtn === playBtn) { currentPreviewBtn = null; currentPreviewAudio = null; }
+          stopBtn.disabled = true;
+          if (currentStopFn === stopThis) { currentStopFn = null; currentPreviewAudio = null; }
         });
       });
+
+      stopBtn.addEventListener('click', stopThis);
+
+      item.appendChild(playBtn);
+      item.appendChild(stopBtn);
       item.appendChild(playBtn);
     }
 
@@ -2321,13 +2349,20 @@ function buildWords(alignment) {
   let wordStart = null;
   let prevEnd = 0;
 
+  // Audio Tags wie [sighs] oder [concerned] steuern nur die Stimmgebung bei
+  // ElevenLabs, dürfen aber niemals im sichtbaren Untertiteltext auftauchen.
+  // Entfernt auch Fälle, in denen direkt ein Satzzeichen an der Klammer klebt,
+  // z. B. "[concerned]," oder "[sighs].".
+  const stripAudioTag = (text) => text.replace(/\[[^\[\]]*\]/g, '').trim();
+
   for (let i = 0; i < chars.length; i++) {
     const ch = chars[i];
     const s = starts[i];
     const e = ends[i];
     if (/^\s$/.test(ch)) {
       if (current) {
-        words.push({ text: current, start: wordStart, end: prevEnd });
+        const cleaned = stripAudioTag(current);
+        if (cleaned) words.push({ text: cleaned, start: wordStart, end: prevEnd });
         current = '';
         wordStart = null;
       }
@@ -2337,7 +2372,10 @@ function buildWords(alignment) {
     }
     prevEnd = e;
   }
-  if (current) words.push({ text: current, start: wordStart, end: prevEnd });
+  if (current) {
+    const cleaned = stripAudioTag(current);
+    if (cleaned) words.push({ text: cleaned, start: wordStart, end: prevEnd });
+  }
   return words;
 }
 
