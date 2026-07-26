@@ -1145,6 +1145,11 @@
   }
   .char-chip:hover { border-color: var(--accent-dim); }
   .char-chip.active { border-color: var(--accent); background: var(--accent-dim); }
+  @keyframes charChipFlash {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    30% { box-shadow: 0 0 0 4px var(--accent-dim); }
+  }
+  .char-chip-flash { animation: charChipFlash 0.6s ease 2; }
   .char-chip.active .char-chip-name { color: var(--accent-text); font-weight: 500; }
   .char-avatar {
     width: 48px;
@@ -1259,7 +1264,11 @@
     gap: 10px;
     padding: 8px 4px;
     border-bottom: 1px solid var(--line-soft);
+    border-radius: 6px;
+    transition: background 0.15s;
   }
+  .voice-lib-item.playing { background: var(--accent-dim); }
+  .voice-lib-item.playing .voice-lib-name { color: var(--accent-text); font-weight: 500; }
   .voice-lib-item:last-child { border-bottom: none; }
   .voice-lib-name { font-size: 13px; color: var(--text); flex: 1; }
   .voice-lib-cat { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--text-faint); }
@@ -1605,6 +1614,7 @@
     <div class="field" style="margin-top: 14px;">
       <label>Charakter</label>
       <div class="char-chips" id="charChips"></div>
+      <div class="hint" id="activeVoiceLabel" style="margin-top: 8px;"></div>
     </div>
 
 
@@ -1936,6 +1946,11 @@ function initials(name) {
 function renderCharChips() {
   const wrap = document.getElementById('charChips');
   wrap.innerHTML = '';
+  const labelEl = document.getElementById('activeVoiceLabel');
+  const activeChar = characters.find(c => c.id === activeCharacterId);
+  if (labelEl) {
+    labelEl.textContent = activeChar ? `Aktive Stimme: ${activeChar.name}` : 'Keine Stimme ausgewählt.';
+  }
   characters.forEach(ch => {
     const chip = document.createElement('div');
     chip.className = 'char-chip' + (ch.id === activeCharacterId ? ' active' : '');
@@ -2139,6 +2154,7 @@ document.getElementById('addCharBtn').addEventListener('click', async () => {
 
 // --- Stimmen-Bibliothek: ElevenLabs Voice Library durchsuchen, mit echten Filtern und Hörprobe ---
 let currentPreviewAudio = null;
+let currentPreviewBtn = null;
 let voiceLibraryLoadedOnce = false;
 
 async function searchVoiceLibrary() {
@@ -2216,10 +2232,33 @@ function renderVoiceLibrary(voices) {
       playBtn.className = 'voice-lib-play';
       playBtn.textContent = '▶';
       playBtn.addEventListener('click', () => {
-        if (currentPreviewAudio) { currentPreviewAudio.pause(); currentPreviewAudio = null; }
+        const wasThisPlaying = currentPreviewAudio && currentPreviewBtn === playBtn && !currentPreviewAudio.paused;
+
+        // Läuft gerade eine andere oder dieselbe Vorschau, erst sauber stoppen
+        // und deren Zeile wieder normal darstellen, bevor etwas Neues beginnt.
+        if (currentPreviewAudio) {
+          currentPreviewAudio.pause();
+          currentPreviewAudio = null;
+        }
+        if (currentPreviewBtn) {
+          currentPreviewBtn.textContent = '▶';
+          currentPreviewBtn.closest('.voice-lib-item')?.classList.remove('playing');
+          currentPreviewBtn = null;
+        }
+
+        if (wasThisPlaying) return; // war schon diese Zeile: einfach nur stoppen, nicht neu starten
+
         const audio = new Audio(v.preview_url);
         currentPreviewAudio = audio;
+        currentPreviewBtn = playBtn;
+        playBtn.textContent = '⏸';
+        item.classList.add('playing');
         audio.play();
+        audio.addEventListener('ended', () => {
+          playBtn.textContent = '▶';
+          item.classList.remove('playing');
+          if (currentPreviewBtn === playBtn) { currentPreviewBtn = null; currentPreviewAudio = null; }
+        });
       });
       item.appendChild(playBtn);
     }
@@ -2229,15 +2268,28 @@ function renderVoiceLibrary(voices) {
     useBtn.className = 'voice-lib-use';
     useBtn.textContent = 'Übernehmen';
     useBtn.addEventListener('click', () => {
-      document.getElementById('newCharName').value = v.name;
-      document.getElementById('newCharVoiceId').value = v.voice_id;
-      const addCard = document.getElementById('newCharVoiceId').closest('.fmt-card');
-      if (addCard) {
-        addCard.classList.remove('collapsed');
-        const btn = addCard.querySelector('.fmt-expand');
-        if (btn) { btn.textContent = '−'; btn.setAttribute('aria-label', 'Details verbergen'); }
+      // Direkt einen neuen Charakter mit dieser Stimme anlegen und sofort als
+      // aktiv markieren, statt nur ein Formular vorzubefüllen, das vorher noch
+      // einen zusätzlichen, nirgends erklärten Speichern-Klick brauchte.
+      const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, image: null };
+      characters.push(newChar);
+      saveCharacters(characters);
+      activeCharacterId = newChar.id;
+      activeVoiceId = newChar.voiceId;
+      renderCharChips();
+
+      const original = useBtn.textContent;
+      useBtn.textContent = 'Übernommen ✓';
+      useBtn.disabled = true;
+      setTimeout(() => { useBtn.textContent = original; useBtn.disabled = false; }, 1800);
+
+      const chipsWrap = document.getElementById('charChips');
+      chipsWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const newChip = chipsWrap.querySelector(`[data-id="${newChar.id}"]`);
+      if (newChip) {
+        newChip.classList.add('char-chip-flash');
+        setTimeout(() => newChip.classList.remove('char-chip-flash'), 1200);
       }
-      document.getElementById('newCharName').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     item.appendChild(useBtn);
 
