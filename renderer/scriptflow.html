@@ -1401,15 +1401,15 @@
   }
   .char-chip-delete {
     position: absolute;
-    top: -7px;
-    right: -7px;
-    width: 20px;
-    height: 20px;
+    top: -8px;
+    right: -8px;
+    width: 23px;
+    height: 23px;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 50%;
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: 13.5px;
     cursor: pointer;
     display: none;
     align-items: center;
@@ -1423,29 +1423,29 @@
   .char-chip-delete.confirm {
     display: flex;
     width: auto;
-    height: 20px;
-    padding: 0 7px;
-    border-radius: 10px;
+    height: 23px;
+    padding: 0 8px;
+    border-radius: 11px;
     background: var(--error);
     border-color: var(--error);
     color: #fff;
-    font-size: 10px;
+    font-size: 11px;
     font-family: 'Poppins', sans-serif;
     white-space: nowrap;
-    top: -8px;
-    right: -14px;
+    top: -9px;
+    right: -16px;
   }
   .char-chip-edit {
     position: absolute;
-    top: -7px;
-    left: -7px;
-    width: 20px;
-    height: 20px;
+    top: -8px;
+    left: -8px;
+    width: 23px;
+    height: 23px;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 50%;
     color: var(--text-faint);
-    font-size: 10.5px;
+    font-size: 12px;
     cursor: pointer;
     display: none;
     align-items: center;
@@ -1458,15 +1458,15 @@
   .char-chip-edit:hover { color: var(--accent); border-color: var(--accent); }
   .char-chip-fav {
     position: absolute;
-    top: 48px;
+    top: 46px;
     right: 6px;
-    width: 17px;
-    height: 17px;
+    width: 20px;
+    height: 20px;
     background: var(--panel);
     border: 1px solid var(--accent);
     border-radius: 50%;
     color: var(--accent);
-    font-size: 9.5px;
+    font-size: 11px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1476,27 +1476,33 @@
     transition: transform 0.15s, background 0.15s, color 0.15s;
   }
   .char-chip-fav:hover { transform: scale(1.15); background: var(--error); border-color: var(--error); color: #fff; }
-  .char-chip-play {
+  .char-chip-playstop {
     position: absolute;
-    top: 48px;
+    top: 46px;
     left: 6px;
-    width: 17px;
-    height: 17px;
+    display: none;
+    gap: 4px;
+  }
+  .char-chip:hover .char-chip-playstop { display: flex; }
+  .char-chip-play, .char-chip-stop {
+    width: 20px;
+    height: 20px;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 50%;
     color: var(--text-dim);
-    font-size: 8px;
+    font-size: 9px;
     cursor: pointer;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
     padding: 0;
     transition: transform 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
   }
-  .char-chip:hover .char-chip-play { display: flex; }
   .char-chip-play:hover { transform: scale(1.15); border-color: var(--accent); color: var(--accent); }
+  .char-chip-stop:not(:disabled):hover { transform: scale(1.15); border-color: var(--error); color: var(--error); }
+  .char-chip-stop:disabled { opacity: 0.4; cursor: default; }
 
   .voice-lib-list { max-height: 320px; overflow-y: auto; margin-top: 10px; }
   .voice-lib-item {
@@ -2338,22 +2344,34 @@ function renderCharChips() {
       chip.appendChild(fallback);
     }
 
+    const playStopWrap = document.createElement('div');
+    playStopWrap.className = 'char-chip-playstop';
+
     const playBadge = document.createElement('button');
     playBadge.type = 'button';
     playBadge.className = 'char-chip-play';
     playBadge.innerHTML = '▶';
     playBadge.setAttribute('aria-label', `${ch.name} anhören`);
+
+    const stopBadge = document.createElement('button');
+    stopBadge.type = 'button';
+    stopBadge.className = 'char-chip-stop';
+    stopBadge.innerHTML = '■';
+    stopBadge.setAttribute('aria-label', `${ch.name} stoppen`);
+    stopBadge.disabled = true;
+
+    const stopThis = () => {
+      if (currentPreviewAudio) { currentPreviewAudio.pause(); currentPreviewAudio = null; }
+      playBadge.innerHTML = '▶';
+      stopBadge.disabled = true;
+      currentStopFn = null;
+    };
+    stopBadge.addEventListener('click', (e) => { e.stopPropagation(); stopThis(); });
+
     playBadge.addEventListener('click', async (e) => {
       e.stopPropagation();
 
-      const stopThis = () => {
-        if (currentPreviewAudio) { currentPreviewAudio.pause(); currentPreviewAudio = null; }
-        playBadge.innerHTML = '▶';
-        currentStopFn = null;
-      };
-
-      // Läuft diese Vorschau schon, zweiter Klick stoppt sie einfach wieder.
-      if (currentStopFn === stopThis) { stopThis(); return; }
+      // Läuft diese Vorschau schon, Klick auf Play startet einfach neu von vorn.
       if (currentStopFn) currentStopFn();
 
       const apiKey = document.getElementById('apiKey').value.trim();
@@ -2377,9 +2395,10 @@ function renderCharChips() {
         currentPreviewAudio = audio;
         currentStopFn = stopThis;
         playBadge.innerHTML = '⏸';
+        stopBadge.disabled = false;
         audio.play();
         audio.addEventListener('ended', () => {
-          if (currentStopFn === stopThis) { playBadge.innerHTML = '▶'; currentStopFn = null; currentPreviewAudio = null; }
+          if (currentStopFn === stopThis) { playBadge.innerHTML = '▶'; stopBadge.disabled = true; currentStopFn = null; currentPreviewAudio = null; }
         });
       } catch (err) {
         console.warn(err);
@@ -2387,7 +2406,10 @@ function renderCharChips() {
         alert('Vorschau konnte nicht geladen werden.');
       }
     });
-    chip.appendChild(playBadge);
+
+    playStopWrap.appendChild(playBadge);
+    playStopWrap.appendChild(stopBadge);
+    chip.appendChild(playStopWrap);
 
     if (ch.favorited) {
       const favBadge = document.createElement('button');
@@ -4441,7 +4463,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.3.2';
+const FALLBACK_VERSION = '2.3.3';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
