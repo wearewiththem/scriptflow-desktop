@@ -25,5 +25,9 @@ contextBridge.exposeInMainWorld('windowControls', {
   },
   onUpdateCheckFinished: (callback) => {
     ipcRenderer.on('update-check-finished', () => callback());
-  }
+  },
+  onUpdateReady: (callback) => {
+    ipcRenderer.on('update-ready', (event, version) => callback(version));
+  },
+  installUpdateNow: () => ipcRenderer.invoke('install-update-now')
 });

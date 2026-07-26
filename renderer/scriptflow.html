@@ -801,46 +801,46 @@
     border-radius: 8px;
     padding: 16px;
   }
-  .prompt-flow-steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .prompt-flow-steps li {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .prompt-flow-steps > li > span:last-child {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--text-dim);
-    padding-top: 2px;
-  }
-  .prompt-flow-num {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
+  .info-tooltip-wrap { position: relative; flex-shrink: 0; }
+  .info-tooltip-btn {
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: var(--accent-dim);
-    color: var(--accent);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
     font-weight: 600;
+    cursor: help;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
   }
-  .prompt-flow-note {
-    font-size: 11.5px;
-    color: var(--text-faint);
+  .info-tooltip-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .info-tooltip-content {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    width: 260px;
+    background: var(--panel);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    z-index: 20;
   }
+  .info-tooltip-content strong { color: var(--text); display: block; margin-bottom: 6px; }
+  .info-tooltip-content ol { margin: 0; padding-left: 18px; }
+  .info-tooltip-content li { margin-bottom: 4px; }
+  .info-tooltip-content li:last-child { margin-bottom: 0; }
+  .info-tooltip-wrap:hover .info-tooltip-content { display: block; }
+
   .warning-banner {
     background: var(--panel-2);
     border: 1px solid var(--error);
@@ -1650,6 +1650,24 @@
   </div>
 </div>
 
+<div class="settings-overlay" id="updateReadyOverlay">
+  <div class="settings-panel about-panel" style="max-width: 340px;">
+    <div class="settings-panel-head">
+      <span class="fmt-name">Update verfügbar</span>
+    </div>
+    <svg class="about-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 24 H13" stroke="var(--text-dim)" stroke-width="3" stroke-linecap="round"/>
+      <path d="M13 24 C 17 24, 17 10, 21 10 S 25 38, 29 38 S 33 24, 44 24" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <div class="about-name" id="updateReadyVersionText">Scriptflow ist bereit</div>
+    <p class="step-sub" style="text-align: center; margin-top: 8px;">Die neue Version wurde bereits heruntergeladen. Jetzt installieren und neu starten, oder später, dann installiert sie sich automatisch beim nächsten Beenden der App.</p>
+    <div class="row" style="gap: 8px; margin-top: 14px; width: 100%;">
+      <button type="button" class="secondary" id="updateReadyLaterBtn" style="width: 100%;">Später</button>
+      <button type="button" class="primary" id="updateReadyInstallBtn" style="width: 100%;">Jetzt installieren</button>
+    </div>
+  </div>
+</div>
+
 <div class="settings-overlay" id="aboutOverlay">
   <div class="settings-panel about-panel" style="max-width: 320px;">
     <div class="settings-panel-head">
@@ -1822,24 +1840,23 @@
       <textarea id="script" placeholder="Dein Skript hier einfügen …"></textarea>
     </div>
 
-    <div class="subtle-panel prompt-flow" style="margin-top: 14px;">
-      <div class="fmt-name" style="margin-bottom: 4px;">Optional: Betonung per KI hinzufügen</div>
-      <p class="step-sub" style="margin-top: 0; margin-bottom: 12px;">Lässt eine KI deinem Text automatisch Audio Tags wie [sighs] oder [curious] hinzufügen, damit ElevenLabs die passenden Stellen betont. Läuft außerhalb des Tools, in vier kurzen Schritten:</p>
-      <ol class="prompt-flow-steps">
-        <li><span class="prompt-flow-num">1</span><span>Skript oben in das Feld eintippen oder einfügen.</span></li>
-        <li>
-          <span class="prompt-flow-num">2</span>
-          <span>
-            <button type="button" class="secondary" id="copyPromptBtn" style="width: 100%; margin-top: 0;">
-              <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.6"/></svg>
-              Skript + Anleitung kopieren
-            </button>
-            <span class="prompt-flow-note">Nimmt dein Skript von oben automatisch mit, du musst nichts selbst markieren oder kopieren.</span>
-          </span>
-        </li>
-        <li><span class="prompt-flow-num">3</span><span>In einen neuen Chat bei ChatGPT, Claude oder einer anderen KI einfügen und abschicken.</span></li>
-        <li><span class="prompt-flow-num">4</span><span>Die Antwort zurück ins Skript-Feld oben einfügen, sie ersetzt deinen ursprünglichen Text mit der Version inklusive Audio Tags.</span></li>
-      </ol>
+    <div class="row" style="margin-top: 14px; align-items: center; gap: 8px;">
+      <button type="button" class="secondary" id="copyPromptBtn" style="flex: 1; margin-top: 0;">
+        <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.6"/></svg>
+        Skript + Anleitung für KI kopieren
+      </button>
+      <div class="info-tooltip-wrap">
+        <button type="button" class="info-tooltip-btn" aria-label="Wie funktioniert das?">?</button>
+        <div class="info-tooltip-content">
+          <strong>So funktioniert's:</strong>
+          <ol>
+            <li>Skript oben eintippen.</li>
+            <li>Dieser Knopf kopiert Skript und Anleitung zusammen.</li>
+            <li>In ChatGPT, Claude oder eine andere KI einfügen und abschicken.</li>
+            <li>Antwort zurück ins Skript-Feld einfügen, ersetzt den Text inklusive Audio Tags.</li>
+          </ol>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -4136,7 +4153,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.2.0';
+const FALLBACK_VERSION = '2.2.1';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
@@ -4245,6 +4262,21 @@ if (window.windowControls) {
   document.getElementById('menuLogBtn').addEventListener('click', () => {
     if (window.desktopBridge && window.desktopBridge.openLogFolder) window.desktopBridge.openLogFolder();
     menu.classList.remove('visible');
+  });
+
+  // --- Update bereit: eigenes Fenster im App-Design statt dem nativen
+  // Windows-Dialog, den electron-updater sonst selbst anzeigen würde. ---
+  if (window.windowControls.onUpdateReady) {
+    window.windowControls.onUpdateReady((version) => {
+      document.getElementById('updateReadyVersionText').textContent = `Scriptflow ${version} ist bereit`;
+      document.getElementById('updateReadyOverlay').classList.add('visible');
+    });
+  }
+  document.getElementById('updateReadyLaterBtn').addEventListener('click', () => {
+    document.getElementById('updateReadyOverlay').classList.remove('visible');
+  });
+  document.getElementById('updateReadyInstallBtn').addEventListener('click', () => {
+    if (window.windowControls.installUpdateNow) window.windowControls.installUpdateNow();
   });
 }
 
@@ -4449,11 +4481,14 @@ document.addEventListener('keydown', (e) => {
 
   // Escape: das jeweils oberste offene Fenster schließen, nicht mehrere auf einmal
   if (e.key === 'Escape') {
+    const updateReady = document.getElementById('updateReadyOverlay');
     const about = document.getElementById('aboutOverlay');
     const shortcuts = document.getElementById('shortcutsOverlay');
     const settings = document.getElementById('settingsOverlay');
     const titlebarMenu = document.getElementById('titlebarMenu');
-    if (about.classList.contains('visible')) {
+    if (updateReady.classList.contains('visible')) {
+      updateReady.classList.remove('visible');
+    } else if (about.classList.contains('visible')) {
       about.classList.remove('visible');
     } else if (shortcuts.classList.contains('visible')) {
       shortcuts.classList.remove('visible');

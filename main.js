@@ -273,19 +273,11 @@ autoUpdater.on('error', (err) => {
 autoUpdater.on('update-downloaded', (info) => {
   logToFile('INFO', `Update heruntergeladen: Version ${info.version}`);
   const win = BrowserWindow.getAllWindows()[0];
-  dialog.showMessageBox(win, {
-    type: 'info',
-    title: 'Update verfügbar',
-    message: `Scriptflow ${info.version} ist bereit.`,
-    detail: 'Die neue Version wurde bereits heruntergeladen. Jetzt installieren und neu starten, oder später, dann installiert sie sich automatisch beim nächsten Beenden der App.',
-    buttons: ['Jetzt installieren', 'Später'],
-    defaultId: 0,
-    cancelId: 1
-  }).then((result) => {
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-  });
+  if (win) win.webContents.send('update-ready', info.version);
+});
+
+ipcMain.handle('install-update-now', () => {
+  autoUpdater.quitAndInstall();
 });
 
 app.on('window-all-closed', () => {
