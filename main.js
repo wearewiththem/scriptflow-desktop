@@ -66,6 +66,14 @@ function buildAppMenu() {
         {
           label: 'Nach Updates suchen',
           click: () => {
+            if (!app.isPackaged) {
+              dialog.showMessageBox({
+                type: 'info',
+                title: 'Nur in der installierten Version',
+                message: 'Update-Prüfung funktioniert nur in der fertig installierten App, nicht über "npm start".'
+              });
+              return;
+            }
             try {
               manualUpdateCheckInProgress = true;
               autoUpdater.checkForUpdates();
@@ -215,18 +223,21 @@ app.whenReady().then(() => {
   // Workflow Artifacts) über GitHub Actions veröffentlicht werden, siehe
   // .github/workflows/build-windows.yml und die "publish" Angabe unten in
   // package.json, dort muss "owner" auf deinen tatsächlichen GitHub
-  // Nutzernamen angepasst werden.
-  try {
-    autoUpdater.checkForUpdates();
-  } catch (err) {
-    logToFile('WARNUNG', `Auto Update Prüfung fehlgeschlagen: ${err.message}`);
-  }
+  // Nutzernamen angepasst werden. Funktioniert grundsätzlich nur in der
+  // installierten exe, nicht während der Entwicklung über "npm start".
+  if (app.isPackaged) {
+    try {
+      autoUpdater.checkForUpdates();
+    } catch (err) {
+      logToFile('WARNUNG', `Auto Update Prüfung fehlgeschlagen: ${err.message}`);
+    }
 
-  // Läuft die App länger im Hintergrund, ohne dass jemand sie neu startet,
-  // würde sonst nie geprüft werden. Alle 4 Stunden nochmal automatisch nachsehen.
-  setInterval(() => {
-    try { autoUpdater.checkForUpdates(); } catch (err) { /* wird über 'error' Event geloggt */ }
-  }, 4 * 60 * 60 * 1000);
+    // Läuft die App länger im Hintergrund, ohne dass jemand sie neu startet,
+    // würde sonst nie geprüft werden. Alle 4 Stunden nochmal automatisch nachsehen.
+    setInterval(() => {
+      try { autoUpdater.checkForUpdates(); } catch (err) { /* wird über 'error' Event geloggt */ }
+    }, 4 * 60 * 60 * 1000);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -301,6 +312,24 @@ ipcMain.handle('window-is-maximized', (event) => {
 let manualUpdateCheckInProgress = false;
 
 ipcMain.handle('check-for-updates', () => {
+  const win = BrowserWindow.getAllWindows()[0];
+
+  // Auto Update funktioniert grundsätzlich nur in der fertig installierten
+  // exe, nicht während der Entwicklung über "npm start". Elektron-updater
+  // braucht dafür Informationen, die nur beim Bauen mit electron-builder
+  // erzeugt werden. Ohne diese Prüfung würde hier einfach gar nichts passieren,
+  // ohne dass ersichtlich wird warum.
+  if (!app.isPackaged) {
+    if (win) win.webContents.send('update-check-finished');
+    dialog.showMessageBox(win, {
+      type: 'info',
+      title: 'Nur in der installierten Version',
+      message: 'Update-Prüfung funktioniert nur in der fertig installierten App.',
+      detail: 'Du startest Scriptflow gerade über "npm start" zum Entwickeln, dafür gibt es keine echte Update-Prüfung. Installier die über GitHub Actions gebaute Setup-Datei, dann funktioniert das hier wie erwartet.'
+    });
+    return { ok: false, error: 'not-packaged' };
+  }
+
   try {
     manualUpdateCheckInProgress = true;
     autoUpdater.checkForUpdates();
