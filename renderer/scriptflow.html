@@ -801,6 +801,46 @@
     border-radius: 8px;
     padding: 16px;
   }
+  .prompt-flow-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .prompt-flow-steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .prompt-flow-steps > li > span:last-child {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-dim);
+    padding-top: 2px;
+  }
+  .prompt-flow-num {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .prompt-flow-note {
+    font-size: 11.5px;
+    color: var(--text-faint);
+  }
   .warning-banner {
     background: var(--panel-2);
     border: 1px solid var(--error);
@@ -1782,11 +1822,25 @@
       <textarea id="script" placeholder="Dein Skript hier einfügen …"></textarea>
     </div>
 
-    <button type="button" class="secondary" id="copyPromptBtn" style="width: 100%;">
-      <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.6"/></svg>
-      Betonungs-Prompt für KI kopieren
-    </button>
-    <div class="hint">Kopiere den Prompt zusammen mit deinem Skript oben in einem Rutsch in die Zwischenablage. In einen neuen Chat einfügen, senden, die KI gibt dir den Text mit Audio Tags zurück, den fügst du dann hier oben ein.</div>
+    <div class="subtle-panel prompt-flow" style="margin-top: 14px;">
+      <div class="fmt-name" style="margin-bottom: 4px;">Optional: Betonung per KI hinzufügen</div>
+      <p class="step-sub" style="margin-top: 0; margin-bottom: 12px;">Lässt eine KI deinem Text automatisch Audio Tags wie [sighs] oder [curious] hinzufügen, damit ElevenLabs die passenden Stellen betont. Läuft außerhalb des Tools, in vier kurzen Schritten:</p>
+      <ol class="prompt-flow-steps">
+        <li><span class="prompt-flow-num">1</span><span>Skript oben in das Feld eintippen oder einfügen.</span></li>
+        <li>
+          <span class="prompt-flow-num">2</span>
+          <span>
+            <button type="button" class="secondary" id="copyPromptBtn" style="width: 100%; margin-top: 0;">
+              <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.6"/></svg>
+              Skript + Anleitung kopieren
+            </button>
+            <span class="prompt-flow-note">Nimmt dein Skript von oben automatisch mit, du musst nichts selbst markieren oder kopieren.</span>
+          </span>
+        </li>
+        <li><span class="prompt-flow-num">3</span><span>In einen neuen Chat bei ChatGPT, Claude oder einer anderen KI einfügen und abschicken.</span></li>
+        <li><span class="prompt-flow-num">4</span><span>Die Antwort zurück ins Skript-Feld oben einfügen, sie ersetzt deinen ursprünglichen Text mit der Version inklusive Audio Tags.</span></li>
+      </ol>
+    </div>
   </div>
 
   <div class="step">
@@ -4082,7 +4136,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.1.3';
+const FALLBACK_VERSION = '2.2.0';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
