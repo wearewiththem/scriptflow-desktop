@@ -203,8 +203,9 @@
     border: 1px solid var(--line);
     color: var(--text-dim);
     font-family: 'Poppins', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1394,6 +1395,20 @@
   }
   .voice-lib-play:hover, .voice-lib-use:hover, .voice-lib-stop:not(:disabled):hover { border-color: var(--accent); }
   .voice-lib-stop:disabled { opacity: 0.35; cursor: default; color: var(--text-faint); }
+  .voice-lib-star {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 2px 4px;
+    transition: color 0.15s, transform 0.15s;
+  }
+  .voice-lib-star:hover { color: var(--accent); transform: scale(1.1); }
+  .voice-lib-star.active { color: var(--accent); cursor: default; }
+  .voice-lib-star.active:hover { transform: none; }
   .fmt-toggle-label { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; }
   .fmt-toggle, .plain-toggle { width: auto; accent-color: var(--accent); cursor: pointer; }
   .fmt-card.disabled { opacity: 0.4; }
@@ -1483,7 +1498,7 @@
   </div>
   <div class="titlebar-controls">
     <div class="titlebar-menu-wrap">
-      <button type="button" class="titlebar-help-btn" id="menubarHelpBtn" aria-label="Hilfe">?</button>
+      <button type="button" class="titlebar-help-btn" id="menubarHelpBtn" aria-label="Menü">⋯</button>
       <div class="titlebar-menu titlebar-menu-right" id="titlebarMenu">
         <button type="button" id="menuAboutBtn">Über Scriptflow</button>
         <button type="button" id="menuShortcutsBtn">Tastaturkürzel</button>
@@ -1764,8 +1779,8 @@
         </div>
       </div>
       <div class="field">
-        <label for="newCharOriginalName">ElevenLabs Originalname (optional)</label>
-        <input type="text" id="newCharOriginalName" placeholder="z. B. Stefanie (Warm, Erzählerin)">
+        <label for="newCharOriginalName">ElevenLabs Originalname</label>
+        <input type="text" id="newCharOriginalName" placeholder="Wird beim Übernehmen automatisch eingetragen">
         <div class="hint" style="margin-top: 6px;">Damit du die Stimme bei Bedarf schnell auf elevenlabs.io wiederfindest, unabhängig davon wie du sie hier nennst. Wird beim Übernehmen aus der Stimmenbibliothek automatisch eingetragen.</div>
       </div>
       <div class="field">
@@ -1792,6 +1807,11 @@
         <div class="field">
           <label for="voiceSearch">Suchbegriff</label>
           <input type="text" id="voiceSearch" placeholder="z. B. warm, ruhig, Erzähler …">
+        </div>
+        <div class="field" style="margin-top: 10px;">
+          <label for="voiceSearchById">Oder direkt per Voice ID</label>
+          <input type="text" id="voiceSearchById" class="mono" placeholder="z. B. 21m00Tcm4TlvDq8ikWAM">
+          <div class="hint" style="margin-top: 6px;">Ist die ID bekannt, ruft das direkt genau diese eine Stimme ab, unabhängig von den Filtern darunter.</div>
         </div>
         <div class="row" style="margin-top: 10px;">
           <div class="field">
@@ -2315,6 +2335,31 @@ async function searchVoiceLibrary() {
     return;
   }
 
+  const voiceId = document.getElementById('voiceSearchById').value.trim();
+
+  // Ist eine Voice ID eingetragen, genau diese eine Stimme direkt abrufen,
+  // unabhängig von Suchbegriff und Filtern darunter, die werden dann ignoriert.
+  if (voiceId) {
+    statusEl.style.color = 'var(--text-dim)';
+    statusEl.textContent = 'Lade Stimme …';
+    listEl.innerHTML = '';
+    try {
+      const response = await fetch(`https://api.elevenlabs.io/v1/voices/${encodeURIComponent(voiceId)}`, {
+        headers: { 'xi-api-key': apiKey }
+      });
+      if (!response.ok) throw new Error(response.status === 404 ? 'Keine Stimme mit dieser ID gefunden.' : `API Fehler ${response.status}`);
+      const voice = await response.json();
+      statusEl.style.color = 'var(--success)';
+      statusEl.textContent = `Stimme gefunden: ${voice.name}.`;
+      renderVoiceLibrary([voice]);
+    } catch (err) {
+      console.error(err);
+      statusEl.style.color = 'var(--error)';
+      statusEl.textContent = err.message || 'Stimme konnte nicht geladen werden.';
+    }
+    return;
+  }
+
   const params = new URLSearchParams();
   params.set('page_size', '100');
 
@@ -2350,6 +2395,10 @@ async function searchVoiceLibrary() {
     statusEl.textContent = err.message || 'Stimmen konnten nicht geladen werden.';
   }
 }
+
+document.getElementById('voiceSearchById').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); searchVoiceLibrary(); }
+});
 
 document.getElementById('loadVoicesBtn').addEventListener('click', searchVoiceLibrary);
 
@@ -2426,8 +2475,36 @@ function renderVoiceLibrary(voices) {
 
       item.appendChild(playBtn);
       item.appendChild(stopBtn);
-      item.appendChild(playBtn);
     }
+
+    const isFavorited = () => characters.some(c => c.voiceId === v.voice_id);
+
+    const starBtn = document.createElement('button');
+    starBtn.type = 'button';
+    starBtn.className = 'voice-lib-star';
+    starBtn.innerHTML = isFavorited() ? '★' : '☆';
+    starBtn.classList.toggle('active', isFavorited());
+    starBtn.setAttribute('aria-label', `${v.name} favorisieren`);
+    starBtn.addEventListener('click', () => {
+      if (isFavorited()) return; // schon favorisiert, nichts weiter zu tun
+      // Bewusst leichtgewichtiger als Übernehmen: kein Bearbeiten-Dialog, landet
+      // sofort und ohne Unterbrechung oben bei den Charakteren, genau für den
+      // Fall gedacht, schnell mehrere Favoriten hintereinander zu sammeln.
+      const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, originalName: v.name, image: null };
+      characters.push(newChar);
+      saveCharacters(characters);
+      renderCharChips();
+      starBtn.innerHTML = '★';
+      starBtn.classList.add('active');
+
+      const chipsWrap = document.getElementById('charChips');
+      const newChip = chipsWrap.querySelector(`[data-id="${newChar.id}"]`);
+      if (newChip) {
+        newChip.classList.add('char-chip-flash');
+        setTimeout(() => newChip.classList.remove('char-chip-flash'), 1200);
+      }
+    });
+    item.appendChild(starBtn);
 
     const useBtn = document.createElement('button');
     useBtn.type = 'button';
@@ -2437,6 +2514,9 @@ function renderVoiceLibrary(voices) {
       // Direkt einen neuen Charakter mit dieser Stimme anlegen und sofort als
       // aktiv markieren, statt nur ein Formular vorzubefüllen, das vorher noch
       // einen zusätzlichen, nirgends erklärten Speichern-Klick brauchte.
+      // Der ElevenLabs Name landet fest im Originalname-Feld, nicht im
+      // eigentlichen Namen, den öffnet der Bearbeiten-Dialog direkt markiert
+      // zum Überschreiben, damit klar ist: das hier ist dein eigener Name.
       const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, originalName: v.name, image: null };
       characters.push(newChar);
       saveCharacters(characters);
@@ -2449,13 +2529,10 @@ function renderVoiceLibrary(voices) {
       useBtn.disabled = true;
       setTimeout(() => { useBtn.textContent = original; useBtn.disabled = false; }, 1800);
 
-      const chipsWrap = document.getElementById('charChips');
-      chipsWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const newChip = chipsWrap.querySelector(`[data-id="${newChar.id}"]`);
-      if (newChip) {
-        newChip.classList.add('char-chip-flash');
-        setTimeout(() => newChip.classList.remove('char-chip-flash'), 1200);
-      }
+      openCharEditor(newChar.id);
+      const nameField = document.getElementById('newCharName');
+      nameField.focus();
+      nameField.select();
     });
     item.appendChild(useBtn);
 
@@ -3896,7 +3973,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.0.0';
+const FALLBACK_VERSION = '2.1.0';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
