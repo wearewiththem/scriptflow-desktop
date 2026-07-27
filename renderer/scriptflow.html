@@ -540,6 +540,27 @@
     transition: border-color 0.15s;
   }
   input[type="password"], input.mono { font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+  .input-with-icon { position: relative; }
+  .input-with-icon input { padding-right: 38px; }
+  .input-icon-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-faint);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+  }
+  .input-icon-btn svg { width: 16px; height: 16px; }
+  .input-icon-btn:hover { color: var(--accent); background: var(--accent-dim); }
   textarea { resize: vertical; min-height: 160px; font-family: 'Poppins', sans-serif; line-height: 1.6; }
   textarea:focus, input:focus, select:focus { border-color: var(--accent); }
   select {
@@ -1997,11 +2018,21 @@
         <div class="row">
           <div class="field">
             <label for="voiceSearch">Suchbegriff</label>
-            <input type="text" id="voiceSearch" placeholder="z. B. warm, ruhig, Erzähler …">
+            <div class="input-with-icon">
+              <input type="text" id="voiceSearch" placeholder="z. B. warm, ruhig, Erzähler …">
+              <button type="button" class="input-icon-btn" id="voiceSearchGoBtn" aria-label="Suchen">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M20 20L16.5 16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+            </div>
           </div>
           <div class="field">
             <label for="voiceSearchById">Oder direkt per Voice ID</label>
-            <input type="text" id="voiceSearchById" class="mono" placeholder="z. B. 21m00Tcm4TlvDq8ikWAM">
+            <div class="input-with-icon">
+              <input type="text" id="voiceSearchById" class="mono" placeholder="z. B. 21m00Tcm4TlvDq8ikWAM">
+              <button type="button" class="input-icon-btn" id="voiceSearchByIdGoBtn" aria-label="Suchen">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M20 20L16.5 16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+            </div>
           </div>
         </div>
         <div class="hint" style="margin-top: 6px;">Ist die Voice ID bekannt, ruft das direkt genau diese eine Stimme ab, unabhängig vom Suchbegriff und den Filtern darunter.</div>
@@ -2042,7 +2073,6 @@
             <option value="old">Älter</option>
           </select>
         </div>
-        <button type="button" class="secondary" id="loadVoicesBtn" style="width: 100%; margin-top: 10px;">Aktualisieren</button>
         <div id="voiceLibraryStatus" class="hint" style="margin-top: 8px;"></div>
         <div id="voiceLibraryList" class="voice-lib-list"></div>
       </div>
@@ -2386,6 +2416,9 @@ function renderCharChips() {
           });
           if (!response.ok) {
             const errText = await response.text().catch(() => '');
+            if (errText.includes('voice_not_found')) {
+              throw new Error('Diese Stimme wurde nur über die Suche gefunden, aber nie wirklich zu deinem eigenen ElevenLabs Konto hinzugefügt. Für die Vorschau reicht das leider nicht, dafür bräuchte es entweder ein erneutes Übernehmen aus der Suche (dann wird die Vorschau-Adresse direkt mitgespeichert) oder das Hinzufügen der Stimme auf elevenlabs.io selbst.');
+            }
             throw new Error(`ElevenLabs Antwort ${response.status}${errText ? `: ${errText.slice(0, 150)}` : ''}`);
           }
           const voice = await response.json();
@@ -2733,22 +2766,25 @@ async function searchVoiceLibrary() {
   }
 }
 
-document.getElementById('voiceSearchById').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); searchVoiceLibrary(); }
-});
+// Auch Suchbegriff und Voice ID lösen jetzt von selbst aus, mit kurzer
+// Verzögerung nach dem letzten Tastendruck, damit nicht bei jedem einzelnen
+// Buchstaben schon eine neue Anfrage losgeht.
+let voiceSearchDebounce = null;
+function debouncedSearchVoiceLibrary() {
+  if (!voiceLibraryLoadedOnce) return;
+  clearTimeout(voiceSearchDebounce);
+  voiceSearchDebounce = setTimeout(searchVoiceLibrary, 500);
+}
+document.getElementById('voiceSearchById').addEventListener('input', debouncedSearchVoiceLibrary);
+document.getElementById('voiceSearchByIdGoBtn').addEventListener('click', () => { clearTimeout(voiceSearchDebounce); searchVoiceLibrary(); });
+document.getElementById('voiceSearchGoBtn').addEventListener('click', () => { clearTimeout(voiceSearchDebounce); searchVoiceLibrary(); });
+document.getElementById('voiceSearch').addEventListener('input', debouncedSearchVoiceLibrary);
 
-document.getElementById('loadVoicesBtn').addEventListener('click', searchVoiceLibrary);
-
-// Geschlecht, Sprache und Alter wenden sich direkt bei Auswahl an, nur das
-// Textfeld für den Suchbegriff bleibt bewusst manuell (Enter oder Knopf),
-// damit nicht bei jedem Tastendruck eine neue Anfrage losgeht.
+// Geschlecht, Sprache und Alter wenden sich direkt bei Auswahl an.
 ['voiceFilterGender', 'voiceFilterLanguage', 'voiceFilterAge'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => {
     if (voiceLibraryLoadedOnce) searchVoiceLibrary();
   });
-});
-document.getElementById('voiceSearch').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); searchVoiceLibrary(); }
 });
 
 function renderVoiceLibrary(voices) {
@@ -2840,7 +2876,7 @@ function renderVoiceLibrary(voices) {
       // Bewusst leichtgewichtiger als Übernehmen: kein Bearbeiten-Dialog, landet
       // sofort und ohne Unterbrechung oben bei den Charakteren, genau für den
       // Fall gedacht, schnell mehrere Favoriten hintereinander zu sammeln.
-      const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, originalName: v.name, image: null, favorited: true };
+      const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, originalName: v.name, image: null, favorited: true, previewUrl: v.preview_url || null };
       characters.push(newChar);
       saveCharacters(characters);
       renderCharChips();
@@ -2867,7 +2903,7 @@ function renderVoiceLibrary(voices) {
       // Der ElevenLabs Name landet fest im Originalname-Feld, nicht im
       // eigentlichen Namen, den öffnet der Bearbeiten-Dialog direkt markiert
       // zum Überschreiben, damit klar ist: das hier ist dein eigener Name.
-      const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, originalName: v.name, image: null };
+      const newChar = { id: `char-${Date.now()}`, name: v.name, voiceId: v.voice_id, originalName: v.name, image: null, previewUrl: v.preview_url || null };
       characters.push(newChar);
       saveCharacters(characters);
       activeCharacterId = newChar.id;
@@ -4472,7 +4508,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.3.4';
+const FALLBACK_VERSION = '2.3.8';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
