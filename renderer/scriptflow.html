@@ -2384,26 +2384,35 @@ function renderCharChips() {
           const response = await fetch(`https://api.elevenlabs.io/v1/voices/${encodeURIComponent(ch.voiceId)}`, {
             headers: { 'xi-api-key': apiKey }
           });
-          if (!response.ok) throw new Error('Vorschau nicht gefunden.');
+          if (!response.ok) {
+            const errText = await response.text().catch(() => '');
+            throw new Error(`ElevenLabs Antwort ${response.status}${errText ? `: ${errText.slice(0, 150)}` : ''}`);
+          }
           const voice = await response.json();
           url = voice.preview_url;
           ch.previewUrl = url; // für diese Sitzung merken, kein erneuter Abruf nötig
         }
-        if (!url) { playBadge.innerHTML = '▶'; alert('Für diese Stimme gibt es keine Hörprobe.'); return; }
+        if (!url) { playBadge.innerHTML = '▶'; alert('Für diese Stimme ist bei ElevenLabs keine Hörprobe hinterlegt (preview_url ist leer). Das betrifft öfter eigene geklonte Stimmen, die nie explizit eine Vorschau generiert haben.'); return; }
 
         const audio = new Audio(url);
         currentPreviewAudio = audio;
         currentStopFn = stopThis;
         playBadge.innerHTML = '⏸';
         stopBadge.disabled = false;
-        audio.play();
+        try {
+          await audio.play();
+        } catch (playErr) {
+          throw new Error(`Wiedergabe abgelehnt: ${playErr.message}`);
+        }
         audio.addEventListener('ended', () => {
           if (currentStopFn === stopThis) { playBadge.innerHTML = '▶'; stopBadge.disabled = true; currentStopFn = null; currentPreviewAudio = null; }
         });
       } catch (err) {
         console.warn(err);
         playBadge.innerHTML = '▶';
-        alert('Vorschau konnte nicht geladen werden.');
+        stopBadge.disabled = true;
+        currentStopFn = null;
+        alert(`Vorschau konnte nicht geladen werden.\n\n${err.message}`);
       }
     });
 
@@ -4463,7 +4472,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.3.3';
+const FALLBACK_VERSION = '2.3.4';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
