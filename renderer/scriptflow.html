@@ -1396,6 +1396,12 @@
   }
   .char-chip-flash { animation: charChipFlash 0.6s ease 2; }
   .char-chip.active .char-chip-name { color: var(--accent-text); font-weight: 500; }
+  .char-avatar-wrap {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
   .char-avatar {
     width: 48px;
     height: 48px;
@@ -1503,8 +1509,8 @@
   .char-chip-edit:hover { color: var(--accent); border-color: var(--accent); }
   .char-chip-fav {
     position: absolute;
-    top: 46px;
-    right: 6px;
+    bottom: -4px;
+    right: -4px;
     width: 20px;
     height: 20px;
     background: var(--panel);
@@ -1523,8 +1529,8 @@
   .char-chip-fav:hover { transform: scale(1.15); background: var(--error); border-color: var(--error); color: #fff; }
   .char-chip-playstop {
     position: absolute;
-    top: 46px;
-    left: 6px;
+    bottom: -4px;
+    left: -4px;
     display: none;
     gap: 4px;
   }
@@ -2434,16 +2440,19 @@ function renderCharChips() {
     chip.className = 'char-chip' + (ch.id === activeCharacterId ? ' active' : '');
     chip.dataset.id = ch.id;
 
+    const avatarWrap = document.createElement('div');
+    avatarWrap.className = 'char-avatar-wrap';
+
     if (ch.image) {
       const img = document.createElement('img');
       img.className = 'char-avatar';
       img.src = ch.image;
-      chip.appendChild(img);
+      avatarWrap.appendChild(img);
     } else {
       const fallback = document.createElement('div');
       fallback.className = 'char-avatar-fallback';
       fallback.textContent = initials(ch.name);
-      chip.appendChild(fallback);
+      avatarWrap.appendChild(fallback);
     }
 
     const playStopWrap = document.createElement('div');
@@ -2523,7 +2532,7 @@ function renderCharChips() {
 
     playStopWrap.appendChild(playBadge);
     playStopWrap.appendChild(stopBadge);
-    chip.appendChild(playStopWrap);
+    avatarWrap.appendChild(playStopWrap);
 
     if (ch.favorited) {
       const favBadge = document.createElement('button');
@@ -2539,8 +2548,10 @@ function renderCharChips() {
         if (activeCharacterId === ch.id) { activeCharacterId = null; activeVoiceId = ''; }
         renderCharChips();
       });
-      chip.appendChild(favBadge);
+      avatarWrap.appendChild(favBadge);
     }
+
+    chip.appendChild(avatarWrap);
 
     const displayName = ch.name.replace(/\s*\(.*?\)\s*/g, '').trim() || ch.name;
     const nameSpan = document.createElement('span');
@@ -3217,13 +3228,20 @@ function computeCuts(silences, maxPauseSec) {
   return cuts;
 }
 
-function mapTime(t, cuts) {
+function mapTime(t, cuts, sampleRate) {
+  // Exakt dieselbe Rundung wie beim tatsächlichen Zusammenbau der gekürzten
+  // Audiodatei in buildTrimmedBuffer verwenden (auf ganze Samples runden),
+  // sonst driften Untertitel-Zeitstempel und echtes Audio bei vielen Schnitten
+  // in einem längeren Skript langsam auseinander.
+  const roundToSample = sampleRate ? (sec) => Math.round(sec * sampleRate) / sampleRate : (sec) => sec;
   let shift = 0;
   for (const c of cuts) {
-    if (c.end <= t) {
-      shift += (c.end - c.start);
-    } else if (c.start < t) {
-      shift += (t - c.start);
+    const cStart = roundToSample(c.start);
+    const cEnd = roundToSample(c.end);
+    if (cEnd <= t) {
+      shift += (cEnd - cStart);
+    } else if (cStart < t) {
+      shift += (t - cStart);
       break;
     } else {
       break;
@@ -3855,6 +3873,7 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
     let downloadBlob = audioBlob;
     let downloadExt = 'mp3';
     let cuts = [];
+    let cutSampleRate = null;
     let workingBuffer = null; // gesetzt, sobald wir die Audiospur zum Bearbeiten dekodiert haben
     let ctx = null;
 
@@ -3866,6 +3885,7 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
       ctx = new AudioCtx();
       const arrayBuffer = base64ToArrayBuffer(data.audio_base64);
       const decoded = await ctx.decodeAudioData(arrayBuffer);
+      cutSampleRate = decoded.sampleRate;
 
       const silences = detectSilences(decoded, silenceDb, 0.3);
       cuts = computeCuts(silences, maxPauseMs / 1000);
@@ -3907,8 +3927,8 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
 
     const words = buildWords(alignment).map(w => ({
       text: w.text,
-      start: mapTime(w.start, cuts),
-      end: mapTime(w.end, cuts)
+      start: mapTime(w.start, cuts, cutSampleRate),
+      end: mapTime(w.end, cuts, cutSampleRate)
     }));
 
     FORMATS.forEach(fmt => {
@@ -4139,7 +4159,7 @@ document.getElementById('alignExistingAudioBtn').addEventListener('click', async
         existingAudioTrimmedBlob = null;
       }
       ctx.close();
-      words = words.map(w => ({ text: w.text, start: mapTime(w.start, cuts), end: mapTime(w.end, cuts) }));
+      words = words.map(w => ({ text: w.text, start: mapTime(w.start, cuts, decoded.sampleRate), end: mapTime(w.end, cuts, decoded.sampleRate) }));
     } else {
       existingAudioTrimmedBlob = null;
     }
@@ -4591,7 +4611,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.4.1';
+const FALLBACK_VERSION = '2.4.2';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
