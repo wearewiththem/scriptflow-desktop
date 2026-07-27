@@ -1450,42 +1450,6 @@
     color: var(--text-faint);
     flex-shrink: 0;
   }
-  .char-chip-delete {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 23px;
-    height: 23px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 50%;
-    color: var(--text-faint);
-    font-size: 13.5px;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    padding: 0;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
-  }
-  .char-chip:hover .char-chip-delete { display: flex; }
-  .char-chip-delete:hover { color: var(--error); border-color: var(--error); }
-  .char-chip-delete.confirm {
-    display: flex;
-    width: auto;
-    height: 23px;
-    padding: 0 8px;
-    border-radius: 11px;
-    background: var(--error);
-    border-color: var(--error);
-    color: #fff;
-    font-size: 11px;
-    font-family: 'Poppins', sans-serif;
-    white-space: nowrap;
-    top: -9px;
-    right: -16px;
-  }
   .char-chip-edit {
     position: absolute;
     top: -8px;
@@ -1509,28 +1473,30 @@
   .char-chip-edit:hover { color: var(--accent); border-color: var(--accent); }
   .char-chip-fav {
     position: absolute;
-    bottom: -4px;
-    right: -4px;
-    width: 20px;
-    height: 20px;
+    top: -8px;
+    right: -8px;
+    width: 23px;
+    height: 23px;
     background: var(--panel);
-    border: 1px solid var(--accent);
+    border: 1px solid var(--line);
     border-radius: 50%;
-    color: var(--accent);
-    font-size: 11px;
+    color: var(--text-faint);
+    font-size: 12px;
     cursor: pointer;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     line-height: 1;
     padding: 0;
-    transition: transform 0.15s, background 0.15s, color 0.15s;
+    transition: transform 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
   }
-  .char-chip-fav:hover { transform: scale(1.15); background: var(--error); border-color: var(--error); color: #fff; }
+  .char-chip:hover .char-chip-fav { display: flex; }
+  .char-chip-fav:hover { transform: scale(1.1); color: var(--accent); border-color: var(--accent); }
   .char-chip-playstop {
     position: absolute;
     bottom: -4px;
-    left: -4px;
+    left: 50%;
+    transform: translateX(-50%);
     display: none;
     gap: 4px;
   }
@@ -1767,6 +1733,16 @@
     <div class="row" style="gap: 8px; margin-top: 14px; width: 100%;">
       <button type="button" class="secondary" id="updateReadyLaterBtn" style="width: 100%;">Später</button>
       <button type="button" class="primary" id="updateReadyInstallBtn" style="width: 100%;">Jetzt installieren</button>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay" id="removeCharOverlay">
+  <div class="settings-panel" style="max-width: 320px; text-align: center;">
+    <p id="removeCharText" style="font-size: 14px; color: var(--text); margin: 4px 0 18px;"></p>
+    <div class="row" style="gap: 8px; width: 100%;">
+      <button type="button" class="secondary" id="removeCharCancelBtn" style="width: 100%;">Abbrechen</button>
+      <button type="button" class="primary" id="removeCharConfirmBtn" style="width: 100%; background: var(--error); border-color: var(--error);">Entfernen</button>
     </div>
   </div>
 </div>
@@ -2427,6 +2403,34 @@ function initials(name) {
   return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 
+let charIdPendingRemoval = null;
+
+function openRemoveCharConfirm(id, name) {
+  charIdPendingRemoval = id;
+  document.getElementById('removeCharText').textContent = `${name} wirklich aus den Charakteren entfernen?`;
+  document.getElementById('removeCharOverlay').classList.add('visible');
+}
+
+document.getElementById('removeCharCancelBtn').addEventListener('click', () => {
+  charIdPendingRemoval = null;
+  document.getElementById('removeCharOverlay').classList.remove('visible');
+});
+document.getElementById('removeCharConfirmBtn').addEventListener('click', () => {
+  if (!charIdPendingRemoval) return;
+  characters = characters.filter(c => c.id !== charIdPendingRemoval);
+  saveCharacters(characters);
+  if (activeCharacterId === charIdPendingRemoval) { activeCharacterId = null; activeVoiceId = ''; }
+  charIdPendingRemoval = null;
+  document.getElementById('removeCharOverlay').classList.remove('visible');
+  renderCharChips();
+});
+document.getElementById('removeCharOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'removeCharOverlay') {
+    charIdPendingRemoval = null;
+    document.getElementById('removeCharOverlay').classList.remove('visible');
+  }
+});
+
 function renderCharChips() {
   const wrap = document.getElementById('charChips');
   wrap.innerHTML = '';
@@ -2533,24 +2537,6 @@ function renderCharChips() {
     playStopWrap.appendChild(playBadge);
     playStopWrap.appendChild(stopBadge);
     avatarWrap.appendChild(playStopWrap);
-
-    if (ch.favorited) {
-      const favBadge = document.createElement('button');
-      favBadge.type = 'button';
-      favBadge.className = 'char-chip-fav';
-      favBadge.innerHTML = '★';
-      favBadge.setAttribute('aria-label', `${ch.name} aus Favoriten entfernen`);
-      favBadge.title = 'Favorit, klicken zum Entfernen';
-      favBadge.addEventListener('click', (e) => {
-        e.stopPropagation();
-        characters = characters.filter(c => c.id !== ch.id);
-        saveCharacters(characters);
-        if (activeCharacterId === ch.id) { activeCharacterId = null; activeVoiceId = ''; }
-        renderCharChips();
-      });
-      avatarWrap.appendChild(favBadge);
-    }
-
     chip.appendChild(avatarWrap);
 
     const displayName = ch.name.replace(/\s*\(.*?\)\s*/g, '').trim() || ch.name;
@@ -2572,27 +2558,20 @@ function renderCharChips() {
     });
     chip.appendChild(editBtn);
 
-    const delBtn = document.createElement('button');
-    delBtn.className = 'char-chip-delete';
-    delBtn.textContent = '×';
-    delBtn.setAttribute('aria-label', `${ch.name} entfernen`);
-    delBtn.addEventListener('click', (e) => {
+    // Einheitlich bei jedem Charakter: Klick fragt erst in einem eigenen
+    // Fenster nach, bevor wirklich entfernt wird, kein versehentliches
+    // Löschen mehr durch einen einzigen Klick.
+    const favBadge = document.createElement('button');
+    favBadge.type = 'button';
+    favBadge.className = 'char-chip-fav';
+    favBadge.innerHTML = '★';
+    favBadge.setAttribute('aria-label', `${ch.name} entfernen`);
+    favBadge.title = 'Aus den Charakteren entfernen';
+    favBadge.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (delBtn.classList.contains('confirm')) {
-        characters = characters.filter(c => c.id !== ch.id);
-        saveCharacters(characters);
-        if (activeCharacterId === ch.id) activeCharacterId = null;
-        renderCharChips();
-        return;
-      }
-      delBtn.classList.add('confirm');
-      delBtn.textContent = 'Entfernen?';
-      setTimeout(() => {
-        delBtn.classList.remove('confirm');
-        delBtn.textContent = '×';
-      }, 2500);
+      openRemoveCharConfirm(ch.id, ch.name);
     });
-    chip.appendChild(delBtn);
+    chip.appendChild(favBadge);
 
     chip.addEventListener('click', () => {
       if (activeCharacterId === ch.id) {
@@ -4611,7 +4590,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.4.2';
+const FALLBACK_VERSION = '2.4.3';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
@@ -4939,12 +4918,16 @@ document.addEventListener('keydown', (e) => {
 
   // Escape: das jeweils oberste offene Fenster schließen, nicht mehrere auf einmal
   if (e.key === 'Escape') {
+    const removeChar = document.getElementById('removeCharOverlay');
     const updateReady = document.getElementById('updateReadyOverlay');
     const about = document.getElementById('aboutOverlay');
     const shortcuts = document.getElementById('shortcutsOverlay');
     const settings = document.getElementById('settingsOverlay');
     const titlebarMenu = document.getElementById('titlebarMenu');
-    if (updateReady.classList.contains('visible')) {
+    if (removeChar.classList.contains('visible')) {
+      charIdPendingRemoval = null;
+      removeChar.classList.remove('visible');
+    } else if (updateReady.classList.contains('visible')) {
       updateReady.classList.remove('visible');
     } else if (about.classList.contains('visible')) {
       about.classList.remove('visible');
