@@ -1,6 +1,6 @@
 {
   "name": "scriptflow",
-  "version": "2.3.8",
+  "version": "2.4.1",
   "description": "Scriptflow – Skript zu Audio und Untertitel, ein Klick, drei Formate",
   "main": "main.js",
   "author": "Andreas",
