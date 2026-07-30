@@ -2290,14 +2290,17 @@
     <div class="fmt-card" id="resultSquare" data-fmt="square">
       <div class="fmt-head"><span class="fmt-name">SRT 1:1</span><span class="meta" id="metaSquare"></span></div>
       <button class="secondary fmt-dl" id="dlSquare">SRT 1:1 herunterladen</button>
+      <button class="secondary fmt-dl" id="dlSquareJson" style="margin-top: 8px; font-size: 11.5px;">Wort-Timing (JSON) für Premiere Plugin</button>
     </div>
     <div class="fmt-card" id="resultVertical" data-fmt="vertical">
       <div class="fmt-head"><span class="fmt-name">SRT 9:16</span><span class="meta" id="metaVertical"></span></div>
       <button class="secondary fmt-dl" id="dlVertical">SRT 9:16 herunterladen</button>
+      <button class="secondary fmt-dl" id="dlVerticalJson" style="margin-top: 8px; font-size: 11.5px;">Wort-Timing (JSON) für Premiere Plugin</button>
     </div>
     <div class="fmt-card" id="resultWide" data-fmt="wide">
       <div class="fmt-head"><span class="fmt-name">SRT 16:9</span><span class="meta" id="metaWide"></span></div>
       <button class="secondary fmt-dl" id="dlWide">SRT 16:9 herunterladen</button>
+      <button class="secondary fmt-dl" id="dlWideJson" style="margin-top: 8px; font-size: 11.5px;">Wort-Timing (JSON) für Premiere Plugin</button>
     </div>
   </div>
 
@@ -3001,6 +3004,7 @@ function renderVoiceLibrary(voices) {
 
 const FORMATS = ['square', 'vertical', 'wide'];
 const srtBlobs = {};
+const wordTimingBlobs = {};
 let lastAudioBlob = null;
 let lastAudioExt = 'mp3';
 
@@ -3112,7 +3116,7 @@ function buildBlocksByMeasurement(words, cfg, maxBlockSeconds) {
       if (/[.!?]$/.test(words[j].text)) break;
     }
 
-    blocks.push({ text, start: blockStart, end: words[j].end });
+    blocks.push({ text, start: blockStart, end: words[j].end, words: words.slice(i, j + 1) });
     i = j + 1;
   }
 
@@ -3123,6 +3127,27 @@ function buildBlocksByMeasurement(words, cfg, maxBlockSeconds) {
   }
 
   return blocks;
+}
+
+// --- Export für externe Werkzeuge (z. B. das Premiere Bounce-Captions
+// Plugin), die die echten Einzelwort-Zeitstempel brauchen, nicht nur den
+// zusammengefassten Text pro Block wie in der SRT. Die Zeilen-Aufteilung
+// selbst wird bewusst nicht mit exportiert, das Plugin baut sie sich mit
+// denselben Format-Einstellungen in seiner eigenen Zeichenumgebung neu
+// zusammen, dann bleibt beides in sich konsistent statt auf zwei
+// unterschiedliche Text-Engines angewiesen zu sein, die minimal
+// unterschiedlich messen könnten. ---
+function blocksToWordTimingJson(blocks, cfg) {
+  return JSON.stringify({
+    fontPx: cfg.font,
+    widthPx: usableWidthFor(cfg),
+    maxLines: cfg.lines,
+    blocks: blocks.map(b => ({
+      start: b.start,
+      end: b.end,
+      words: b.words.map(w => ({ text: w.text, start: w.start, end: w.end }))
+    }))
+  }, null, 2);
 }
 
 function blocksToSrt(blocks) {
@@ -3916,12 +3941,16 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
       const blocks = buildBlocksByMeasurement(words, cfg, maxSeconds);
       const srtText = blocksToSrt(blocks);
       srtBlobs[fmt] = new Blob([srtText], { type: 'text/plain' });
+      wordTimingBlobs[fmt] = new Blob([blocksToWordTimingJson(blocks, cfg)], { type: 'application/json' });
 
       const metaId = { square: 'metaSquare', vertical: 'metaVertical', wide: 'metaWide' }[fmt];
       document.getElementById(metaId).textContent = `${blocks.length} Blöcke · ${cfg.lines} Zeilen max.`;
 
       const dlId = { square: 'dlSquare', vertical: 'dlVertical', wide: 'dlWide' }[fmt];
       document.getElementById(dlId).classList.add('ready');
+
+      const dlJsonId = { square: 'dlSquareJson', vertical: 'dlVerticalJson', wide: 'dlWideJson' }[fmt];
+      document.getElementById(dlJsonId).classList.add('ready');
 
       const resultId = { square: 'resultSquare', vertical: 'resultVertical', wide: 'resultWide' }[fmt];
       document.getElementById(resultId).style.display = 'block';
@@ -4039,6 +4068,21 @@ Object.keys(DL_MAP).forEach(id => {
     a.href = URL.createObjectURL(blob);
     const suffix = { square: '1x1', vertical: '9x16', wide: '16x9' }[fmt];
     a.download = `${lastBaseName}_${suffix}.srt`;
+    a.click();
+    revealShowInFolderBtn();
+  });
+});
+
+const DL_JSON_MAP = { dlSquareJson: 'square', dlVerticalJson: 'vertical', dlWideJson: 'wide' };
+Object.keys(DL_JSON_MAP).forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    const fmt = DL_JSON_MAP[id];
+    const blob = wordTimingBlobs[fmt];
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const suffix = { square: '1x1', vertical: '9x16', wide: '16x9' }[fmt];
+    a.download = `${lastBaseName}_${suffix}_worttiming.json`;
     a.click();
     revealShowInFolderBtn();
   });
@@ -4590,7 +4634,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 // müssen. Nur dieser eine Rückfallwert hier ist bei einem echten Versionssprung
 // noch manuell zu pflegen, für den Fall dass jemand die reine HTML Datei ohne
 // die Desktop App öffnet.
-const FALLBACK_VERSION = '2.4.3';
+const FALLBACK_VERSION = '2.5.0';
 
 async function applyAppVersion() {
   let version = FALLBACK_VERSION;
